@@ -67,20 +67,30 @@ module.exports = async (req, res) => {
     ],
   };
 
-  try {
-    const upstream = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-goog-api-key': apiKey,
-        },
-        body: JSON.stringify(payload),
-      }
-    );
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`;
+  const callGemini = (p) => fetch(endpoint, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-goog-api-key': apiKey,
+    },
+    body: JSON.stringify(p),
+  });
 
-    const data = await upstream.json();
+  try {
+    let upstream = await callGemini(payload);
+    let data = await upstream.json();
+
+    /* Google Search grounding has its own small, separate free-tier quota
+       (much lower than text generation). When it's exhausted Gemini returns a
+       429 RESOURCE_EXHAUSTED even though plain generation still works — so
+       retry once WITHOUT the tool. The Toad still replies; it just can't search
+       this turn. */
+    if (upstream.status === 429 && payload.tools) {
+      const { tools, ...withoutTools } = payload;
+      upstream = await callGemini(withoutTools);
+      data = await upstream.json();
+    }
 
     if (data.error) {
       res.status(upstream.status || 502).json({ error: data.error.message || 'Upstream error.' });
