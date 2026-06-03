@@ -4,9 +4,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-Wise Toad is an animated pixel-art scene: a meditating toad sitting in a peaceful sunny grassy field
-under a blue sky (swaying grass, wildflowers, drifting clouds, distant hills, birds, floating pollen),
-rendered to an HTML5 canvas, with a chat UI for "speaking to the Toad." The entire scene — markup,
+Wise Toad is an animated pixel-art scene: a meditating toad sitting in a peaceful grassy field at
+night under a deep-navy starlit sky (swaying grass, wildflowers, drifting clouds, distant hills, a
+crescent moon, fireflies), rendered to an HTML5 canvas, with a chat UI for "speaking to the Toad."
+The scene has a **single state — night** (there is no day mode and no toggle). The entire scene — markup,
 CSS, and the rendering/chat engine — lives in `index.html` inside one IIFE
 (`<script>(() => { 'use strict'; ... })()</script>`). The Toad's replies come from Gemini via a
 small server-side proxy in `api/chat.js` (see **Backend** below); that proxy is the only other
@@ -39,9 +40,10 @@ right canvas pixels at any scale. Font sizes are scaled by `wrapperH / H` for th
 
 ## Architecture
 
-- **`P`** — the color palette (`hillFar`/`hillNear` + the toad's `tD/tM/tL/tB/tE`; most field colours
-  are local consts, see below). **`S`** — scene config; after the field redesign only **`S.toad`**
-  (the toad's x/y) still matters — the other room objects (`win`/`tv`/`shelf`…) are vestigial.
+- **`P`** — the color palette, baked to **night** values (`hillFar`/`hillNear` + the toad's
+  `tD/tM/tL/tB/tE/tSpot/tBelly/tBelly2/tWart/tLid`; most field colours are local consts, see below).
+  **`S`** — scene config; after the field redesign only **`S.toad`** (the toad's x/y) still matters —
+  the other room objects (`win`/`tv`/`shelf`…) are vestigial.
 - **Horizon & field constants** (defined where the old building arrays were): `YH = 96` is the
   horizon (sky above, field below); `SKY_TOP`/`SKY_MID`/`SKY_HZ` and `GR_FAR`/`GR_NEAR` are `[r,g,b]`
   gradient anchors; `GCOLS` (grass) and `FCOLS` (flower colour pairs) are the palettes.
@@ -53,13 +55,40 @@ right canvas pixels at any scale. Font sizes are scaled by `wrapperH / H` for th
   rgb gradient lerp (used for the sky & ground gradients), `pxLine` = Bresenham line. (`boxR`/`boxL`
   fake-iso helpers survive but are now unused.)
 - **`render()` draws strictly back-to-front** (painter's algorithm). The call order *is* the z-order:
-  sky → sun → clouds → birds → hills → field → background grass → flowers → **toad** → foreground
-  grass (sways in front of the toad) → ambient (sunlight + motes) → bubbles. Reordering changes
-  occlusion. Grass/flowers sway via `A.sway`; the per-blade tip offset grows with `tt*tt` (more bend
-  at the tip).
+  sky → stars → moon → clouds → hills → trees → fence → field → background grass → flowers → **toad**
+  → foreground grass (sways in front of the toad) → ambient (moonlight wash + fireflies) → bubbles.
+  Reordering changes occlusion. Grass/flowers sway via `A.sway`; the per-blade tip offset grows with
+  `tt*tt` (more bend at the tip).
 - **Animation loop**: one `requestAnimationFrame(loop)` → `update(dt)` then `render()`. `dt` is
   clamped to 0.06s. All mutable runtime state lives in object **`A`** (`t` time, `sway` wind, `breath`
   toad, and all chat/bubble layout state).
+
+## Night palette (single state — no day mode, no toggle)
+
+The scene is **night-only**: deep navy sky, crescent moon, twinkling stars, fireflies, dark-blue
+chat bubbles. There used to be a day/night theme system with a `#modeToggle` button; it was removed.
+The night colours are now baked directly into the module-level constants — there is no `MODE`,
+`THEMES`, `setMode`, or `body.night` class anymore.
+
+- **`TH`** — a single `const` object holding the non-gradient, non-toad night colours:
+  `grassTip`/`stem`, `treeA/B/C`, `fencePost/Rail/Dark`, `horizonGlow`/`fieldPatch`, `cloudW`/
+  `cloudSh`, and the four bubble fill/border pairs (`tbFill/tbBorder` = toad, `ubFill/ubBorder` =
+  user). Read directly by the draw functions.
+- **Gradient anchors + palettes are `const`** at night values: `SKY_TOP`/`SKY_MID`/`SKY_HZ` and
+  `GR_FAR`/`GR_NEAR` (`[r,g,b]`), plus `GCOLS` (grass) and `FCOLS` (flower pairs). The **toad + hill**
+  colours live in `P` (`tD/tM/tL/tB/tE/tSpot/tBelly/tBelly2/tWart/tLid`, `hillFar`/`hillNear`).
+- **Layout stores a palette index**: grass blades and flowers keep a `ci`/`fi` index (not a colour),
+  resolved against `GCOLS`/`FCOLS` at draw time. **`stars`** is generated last (so it doesn't perturb
+  the other deterministic arrays) with a *world-y* (`wy`); `drawStars()` shows those in the main sky
+  (`0..YH`), `drawStarsTop()` shows the negative-`wy` ones in the mobile `#sceneTop` band.
+- **Night draw functions**: `render()` calls `drawSky` → `drawStars` → `drawMoon` → `drawClouds` →
+  hills/trees/fence/field/grass/flowers/toad → `drawAmbient` (cool moonlight wash + vignette +
+  blinking fireflies from the `motes` array). The DOM chat text colours (reply/input/sent/history/
+  links/mobile bubbles + the `.md-b` inline-bold class) are the dark-blue night values directly in the
+  base CSS — no `.night` scoping.
+
+To add a day mode back, you'd re-introduce a theme object + `MODE`/`setMode`, make `SKY_*`/`GR_*`/
+`GCOLS`/`FCOLS`/`TH` swappable, restore `drawSun`/`drawBirds`, and re-add a toggle control.
 
 ## Chat system (the subtle part)
 
@@ -125,8 +154,8 @@ fullscreen**.
   both `#scene` and `#sceneTop` sample the *same* continuous gradient `skyAt(worldY)` (a clamped linear
   ramp SKY_MID→SKY_HZ keyed to world-y) — `drawSky()` uses `skyAt(y)`, `drawSceneTop()` uses
   `skyAt(y-180)` (its rows are above the main scene) + `cloudsT`. So there's no value jump and no slope
-  kink at the join. Two more guards keep the join invisible: the wrapper has a `#6ebae2` (SKY_MID)
-  background, and `drawAmbient()`'s top warm-wash + top vignette are applied **only on desktop**
+  kink at the join. Two more guards keep the join invisible: the wrapper has a `#101234` (night sky)
+  background, and `drawAmbient()`'s top moon-wash + top vignette are applied **only on desktop**
   (on mobile the main scene's top edge *is* the seam, so tinting it there would draw a line). In
   `render()`, `drawToad()` is **skipped** when `MQ.matches`;
   instead `renderToadCorner()` re-renders just the toad onto a second `<canvas id="toadCorner">`
@@ -143,14 +172,25 @@ fullscreen**.
   *state* machinery every send (harmless now that nothing draws it — overlays hidden, canvas draws
   skipped), so `chatHistory`/`recordMessage` stay consistent. The mobile UI is layered on via
   `mobileAppend(text, role)`, guarded by `MQ.matches`: a
-  **user** turn creates a fresh `.mobile-exchange` and **prepends** it to `#mobile-chat` (newest at the
-  top, older slides down); the **toad** turn appends its `.mobile-msg` *beneath* the user message in
-  that same container. The `'...'` bubble is held in `mobileThink` and its `innerHTML` is rewritten in
-  place when the reply/error arrives.
+  **user** turn creates a fresh `.mobile-exchange` and **appends** it to the *bottom* of `#mobile-chat`
+  (newest at the bottom, like a normal messaging app — it rises up from the bottom edge via the
+  `mobileSlideIn` `translateY(16px)→0` animation and pushes older exchanges upward out of view); the
+  **toad** turn appends its `.mobile-msg` *beneath* the user message in that same container. Short
+  conversations are pinned to the bottom (near the input) by `.mobile-exchange:first-child { margin-top:
+  auto }`, which collapses to 0 once content overflows so scroll-up history still works. `mobileAppend`
+  calls `mobileScrollBottom()` (sets `scrollTop = scrollHeight`) so each send jumps to the newest
+  message (user's question + the `'...'` thinking bubble). When the reply/error swaps in, the log scrolls
+  to the **top** of the toad's new message instead — `mobileScrollToTop(el)` aligns the reply's top edge
+  ~12px below the log top so the reader starts at the beginning, not scrolled to the end of a long reply
+  (the browser clamps for short/last replies that can't reach the top). This re-scroll only fires if
+  `mobilePinnedBottom()` was true before the swap (a user who scrolled up to read history isn't yanked
+  away). The `'...'` bubble is held in `mobileThink` and its `innerHTML` is rewritten in place when the
+  reply/error arrives.
 
 Reverting to desktop-only: remove the mobile CSS block + `#toadCorner`/`#mobile-chat` markup, restore
 `const G`, drop `MQ`/`GT`/`renderToadCorner` and the `MQ.matches` branches in `render()`/
-`dispatchMessage`, and the `mobileAppend`/`mobileThink`/`mobileExchange` definitions.
+`dispatchMessage`, and the `mobileAppend`/`mobileScrollBottom`/`mobilePinnedBottom`/`mobileThink`/
+`mobileExchange` definitions.
 
 ## Backend (deploy-safe Gemini proxy)
 

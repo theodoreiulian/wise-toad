@@ -8,14 +8,14 @@
   <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
   <style>
     *{margin:0;padding:0;box-sizing:border-box}
-    html,body{width:100%;height:100%;overflow:hidden;background:#6ebae2}
+    html,body{width:100%;height:100%;overflow:hidden;background:#101234}
     #canvasWrapper { position:fixed; inset:0; width:100vw; height:100vh; overflow:hidden; z-index:0; }
     canvas#scene{image-rendering:pixelated;image-rendering:crisp-edges;-ms-interpolation-mode:nearest-neighbor;display:block; width:100%; height:100%;}
     #bubbleText, #sentMessage {
       position: absolute;
       z-index: 2;
       display: none;
-      color: #4a4234;
+      color: #dde4ff;
       font-family: 'VT323', monospace;
       text-align: left;
       line-height: 0.85;
@@ -40,7 +40,7 @@
       z-index: 0;
       background: transparent;
       border: none;
-      color: #4a4234;
+      color: #dde4ff;
       font-family: 'VT323', monospace;
       text-align: left;
       line-height: 0.85;
@@ -56,12 +56,12 @@
       word-wrap: break-word;
     }
     #userInput::-webkit-scrollbar { display: none; }
-    #userInput::placeholder { color: #a89878; }
+    #userInput::placeholder { color: #5b6a9a; }
 
     #sendBtn {
       position: absolute;
       z-index: 0;
-      color: #a89878;
+      color: #6f7cae;
       font-family: 'VT323', monospace;
       cursor: pointer;
       display: flex;
@@ -72,8 +72,8 @@
       user-select: none;
       transition: color 0.2s;
     }
-    #sendBtn:hover { color: #6a5e44; }
-    #sendBtn.active { color: #4a4234; }
+    #sendBtn:hover { color: #aab6e4; }
+    #sendBtn.active { color: #dde4ff; }
 
     /* --- previous exchanges: the SAME boxes, scrolled back into view ---
        Transparent DOM text (the pixel bubble behind it is drawn on the
@@ -85,7 +85,7 @@
       display: none;
       flex-direction: column;
       justify-content: center;
-      color: #4a4234;
+      color: #dde4ff;
       font-family: 'VT323', monospace;
       text-align: left;
       line-height: 0.85;
@@ -102,9 +102,9 @@
       margin-top: 8px;
       margin-bottom: 8px;
       margin-right: 8px;
-      background: #edf3e1;
-      border: 1px solid #a9c48f;
-      color: #3a7d44;
+      background: #1d2a52;
+      border: 1px solid #46578f;
+      color: #9fc0e8;
       text-decoration: none;
       padding: 4px 10px;
       border-radius: 2px;
@@ -112,10 +112,13 @@
       transition: all 0.2s;
     }
     a.content-link:hover {
-      background: #e0eccf;
-      color: #285c30;
-      border-color: #7fae67;
+      background: #243366;
+      color: #bcd6f4;
+      border-color: #5a6ca8;
     }
+
+    /* inline bold inside replies */
+    .md-b { color: #e6c468; }
 
     /* =====================================================================
        MOBILE LAYOUT  (portrait phones — toad small at bottom-right,
@@ -146,7 +149,7 @@
         height: 100vh !important;
         z-index: 0;
         overflow: hidden !important;
-        background: #6ebae2;         /* = SKY_MID (the colour at the canvas join) */
+        background: #101234;         /* seam insurance; JS sets the live SKY_MID inline */
       }
       /* Show the left portion of the field (≈ grid x:0–165) across the full width,
          anchored to the BOTTOM so the field fills the lower screen and the corner
@@ -204,20 +207,24 @@ bottom: calc(4px + env(safe-area-inset-bottom));
       .mobile-exchange {
         display: flex;
         flex-direction: column;
-        gap: 4px;
+        gap: 16px;
         margin-bottom: 14px;
-        animation: mobileSlideIn 0.25s ease-out;
+        animation: mobileSlideIn 0.3s ease-out;
       }
+      /* Pins the whole stack to the bottom of the scroll area when the
+         conversation is short (newest near the input), yet collapses to 0 so
+         scrolling still works once messages overflow upward. */
+      .mobile-exchange:first-child { margin-top: auto; }
 
       @keyframes mobileSlideIn {
-        from { opacity: 0; transform: translateY(-8px); }
+        from { opacity: 0; transform: translateY(16px); }
         to   { opacity: 1; transform: translateY(0); }
       }
 
       .mobile-msg {
         max-width: 88%;
         padding: 5px 16px;
-        color: #4a4234;
+        color: #dde4ff;
         font-family: 'VT323', monospace;
         line-height: 1.25;
         font-size: 19px;
@@ -229,8 +236,8 @@ bottom: calc(4px + env(safe-area-inset-bottom));
 
       .mobile-msg.user {
         align-self: flex-start;
-        background: #f5edda;
-        border: 2px solid #cdbd96;
+        background: #1c2950;
+        border: 2px solid #3a4c86;
       }
       .mobile-msg.user::after {
         content: '';
@@ -241,7 +248,7 @@ bottom: calc(4px + env(safe-area-inset-bottom));
         height: 0;
         border-top: 6px solid transparent;
         border-bottom: 6px solid transparent;
-        border-right: 8px solid #cdbd96;
+        border-right: 8px solid #3a4c86;
       }
       .mobile-msg.user::before {
         content: '';
@@ -252,13 +259,13 @@ bottom: calc(4px + env(safe-area-inset-bottom));
         height: 0;
         border-top: 4px solid transparent;
         border-bottom: 4px solid transparent;
-        border-right: 6px solid #f5edda;
+        border-right: 6px solid #1c2950;
         z-index: 1;
       }
       .mobile-msg.toad {
         align-self: flex-end;
-        background: #fdf8ec;
-        border: 2px solid #d6c8a6;
+        background: #16224a;
+        border: 2px solid #33437a;
       }
       .mobile-msg.toad::after {
         content: '';
@@ -269,7 +276,7 @@ bottom: calc(4px + env(safe-area-inset-bottom));
         height: 0;
         border-top: 6px solid transparent;
         border-bottom: 6px solid transparent;
-        border-left: 8px solid #d6c8a6;
+        border-left: 8px solid #33437a;
       }
       .mobile-msg.toad::before {
         content: '';
@@ -280,10 +287,10 @@ bottom: calc(4px + env(safe-area-inset-bottom));
         height: 0;
         border-top: 4px solid transparent;
         border-bottom: 4px solid transparent;
-        border-left: 6px solid #fdf8ec;
+        border-left: 6px solid #16224a;
         z-index: 1;
       }
-      .mobile-msg a { color: #3a7d44; }
+      .mobile-msg a { color: #9fc0e8; }
       .mobile-msg .content-link {
         font-size: 16px;
         padding: 3px 8px;
@@ -377,7 +384,7 @@ bottom: calc(4px + env(safe-area-inset-bottom));
   const GT = TC.getContext('2d');
   GT.imageSmoothingEnabled = false;
   /* translate so the toad's bounding box (grid ~178,69 → 84×98) lands at the origin */
-  const TOAD_OX = 178, TOAD_OY = 69;
+  const TOAD_OX = 218, TOAD_OY = 69;   // = S.toad.x - 7: keeps the corner toad framed despite the desktop x shift
   function renderToadCorner(){
     GT.setTransform(1,0,0,1,0,0);
     GT.clearRect(0,0,TC.width,TC.height);
@@ -394,7 +401,7 @@ bottom: calc(4px + env(safe-area-inset-bottom));
   const GI = IB.getContext('2d');
   GI.imageSmoothingEnabled = false;
   function drawInputBubble(){
-    const fill = '#f5edda', border = '#cdbd96';
+    const fill = TH.ubFill, border = TH.ubBorder;
     const w = IB.width, h = IB.height;
     GI.clearRect(0,0,w,h);
     const prev = G; G = GI;
@@ -432,6 +439,7 @@ bottom: calc(4px + env(safe-area-inset-bottom));
   function drawSceneTop(){
     const HT = 180;
     for (let y = 0; y < HT; y++) rv(0, y, W, 1, skyAt(y - 180));
+    drawStarsTop();
     drawClouds(cloudsT);
   }
 
@@ -451,14 +459,31 @@ bottom: calc(4px + env(safe-area-inset-bottom));
     floorD:'#2a1a10', floorM:'#3a2818', floorL:'#4a3828', floorLn:'#1e1208',
     crtB:'#2a2a3a', crtBD:'#1e1e2e', crtBT:'#32324a',
     shD:'#16100a', shM:'#2a1f14', shL:'#3d2b1f', shSide:'#100c06',
-    tD:'#1a4414', tM:'#286020', tL:'#38842e', tB:'#489838', tE:'#0e0e0e',
+    tD:'#10281c', tM:'#1b3e2e', tL:'#27523c', tB:'#2d5e46', tE:'#070710',
+    tSpot:'#0d2418', tBelly:'#2a5c46', tBelly2:'#326650', tWart:'#1d4636', tLid:'#0b2014',
     note:'#8888a0', pin:'#cc4444',
     spill:'#3e1212', cd:'#4a5588',
     cup:'#7a2828', straw:'#ccccbb',
     bottle:'#3a4a5a', bottleH:'#5a7a9a',
     bookA:'#665544', bookB:'#886655', bookC:'#aa7766', bookD:'#554433',
-    /* --- peaceful grassy field --- */
-    hillFar:'#a9cf92', hillNear:'#8cc06c',
+    /* --- peaceful grassy field (night) --- */
+    hillFar:'#2e3a4a', hillNear:'#242e3c',
+  };
+
+  /* =================================================================
+     THEME  (night — the only mode)
+     Every colour the moonlit scene needs that isn't a gradient anchor (those
+     are the SKY and GR consts below) or a toad/hill colour (those live in P).
+     The field LAYOUT stores palette *indices* (ci/fi) resolved against
+     GCOLS/FCOLS at draw time.
+     ================================================================= */
+  const TH = {
+    grassTip:'#557064', stem:'#1c3a28',
+    treeA:'#1c2a22', treeB:'#162018', treeC:'#101810',
+    fencePost:'#2a2438', fenceRail:'#34304a', fenceDark:'#1e1a2a',
+    horizonGlow:'rgba(120,130,180,0.22)', fieldPatch:'rgba(120,150,200,0.05)',
+    cloudW:'#444c78', cloudSh:'#343a60',
+    tbFill:'#16224a', tbBorder:'#33437a', ubFill:'#1c2950', ubBorder:'#3a4c86',
   };
 
   /* =================================================================
@@ -481,11 +506,20 @@ bottom: calc(4px + env(safe-area-inset-bottom));
     rcv: { x:18, y:12, w:56, h:10, dp:3 },
     /* bookshelf — with left-side 3D depth */
     shelf: { x:274, y:0, w:46, h:180, dp:5 },
-    /* toad (slightly larger, prominent in lower-right) */
-    toad: { x:185, y:72 },
+    /* toad (slightly larger, prominent in lower-right). On mobile the corner
+       render compensates via TOAD_OX, so this x only shifts the desktop toad. */
+    toad: { x:225, y:72 },
     /* train */
     train: { y:24, w:55, h:4, speed:15 },
   };
+
+  /* Desktop chat columns: user messages stay on the left (x:10); the toad's
+     reply bubble + its history boxes sit in a right column anchored to the toad
+     so the speech tail meets its jaw. TBUB_R is the toad bubble's right edge
+     (= S.toad.x - 15, mirroring the original 170-vs-185 gap). On mobile these
+     canvas bubbles aren't drawn, so this only affects desktop. */
+  const TBUB_R = 210;
+  const THIST_X = TBUB_R - 160;   // toad history box left edge (boxes are 160 wide)
 
   /* =================================================================
      DETERMINISTIC RANDOM
@@ -496,22 +530,32 @@ bottom: calc(4px + env(safe-area-inset-bottom));
      FIELD LAYOUT  (peaceful grassy field — generated once, deterministic)
      ================================================================= */
   const YH = 96;                                  // horizon: sky above, field below
-  const SKY_TOP=[72,152,216], SKY_MID=[110,186,226], SKY_HZ=[216,240,247];
-  const GR_FAR=[150,196,140], GR_NEAR=[84,160,60];
-  const GCOLS=['#3f8a2c','#4e9a36','#5fb040','#6cbf48','#2f7322'];
-  const FCOLS=[['#f6f6ec','#f4d24c'],['#f4d24c','#e8a82e'],['#ef93bb','#f6e070'],['#b487d6','#f6e070'],['#e8675e','#f4d24c'],['#fbfaf0','#e8a82e']];
+  /* Sky/ground gradient anchors + grass/flower palettes (night). The field
+     layout below stores palette indices (ci/fi) resolved against these. */
+  const SKY_TOP=[6,8,28], SKY_MID=[16,18,52], SKY_HZ=[66,62,106];
+  const GR_FAR=[40,52,60], GR_NEAR=[20,32,28];
+  const GCOLS=['#1c3530','#223f34','#284b3a','#2f5742','#172c26'];
+  const FCOLS=[['#9aa6c8','#a89a62'],['#a89a62','#7e6a44'],['#9a76a0','#a39866'],['#776fa0','#a39866'],['#9a6360','#a89a62'],['#aeb6c8','#7e6a44']];
 
   const frand = mulberry(7);
   const pick = a => a[(frand()*a.length)|0];
-  const grassB=[], grassF=[], flowers=[], cloudsA=[], cloudsT=[], motes=[], trees=[], fence=[];
-  for(let i=0;i<80;i++){ const y=(YH+4+frand()*75)|0; grassB.push({x:frand()*W|0,y,h:3+frand()*4+(y-YH)*0.05,phase:frand()*6.28,n:3,col:pick(GCOLS)}); }
-  for(let i=0;i<44;i++){ const y=(148+frand()*32)|0; grassF.push({x:frand()*W|0,y,h:9+frand()*9,phase:frand()*6.28,n:3+(frand()*3|0),col:pick(GCOLS)}); }
-  for(let i=0;i<35;i++){ const y=(YH+8+frand()*70)|0; const c=pick(FCOLS); flowers.push({x:frand()*W|0,y,col:c[0],cen:c[1],size:y>140?2:1,stem:(3+(y-YH)*0.06)|0,phase:frand()*6.28}); }
+  const grassB=[], grassF=[], flowers=[], cloudsA=[], cloudsT=[], motes=[], trees=[], fence=[], stars=[];
+  /* grass/flowers store a palette INDEX (ci/fi), not a colour, so the active
+     theme is applied at draw time. The frand() call count per element is kept
+     identical to the original colour-pick so the layout is byte-for-byte the
+     same as before. */
+  for(let i=0;i<80;i++){ const y=(YH+4+frand()*75)|0; grassB.push({x:frand()*W|0,y,h:3+frand()*4+(y-YH)*0.05,phase:frand()*6.28,n:3,ci:(frand()*GCOLS.length)|0}); }
+  for(let i=0;i<44;i++){ const y=(148+frand()*32)|0; grassF.push({x:frand()*W|0,y,h:9+frand()*9,phase:frand()*6.28,n:3+(frand()*3|0),ci:(frand()*GCOLS.length)|0}); }
+  for(let i=0;i<35;i++){ const y=(YH+8+frand()*70)|0; const fi=(frand()*FCOLS.length)|0; flowers.push({x:frand()*W|0,y,fi,size:y>140?2:1,stem:(3+(y-YH)*0.06)|0,phase:frand()*6.28}); }
   for(let i=0;i<7;i++) cloudsA.push({x:frand()*W|0,y:(12+frand()*38)|0,s:0.7+frand()*0.7,speed:1.4+frand()*1.8});
   for(let i=0;i<7;i++) cloudsT.push({x:frand()*W|0,y:(20+frand()*128)|0,s:0.8+frand()*0.8,speed:1.1+frand()*1.6});
   for(let i=0;i<25;i++) motes.push({x:frand()*W|0,y:(YH+frand()*(H-YH))|0,phase:frand()*6.28,sp:0.3+frand()*0.5,drift:2+frand()*4});
   for(let i=0;i<14;i++) trees.push({x:15+frand()*290|0,y:YH-14-frand()*6|0,h:10+frand()*14,w:2+frand()*3|0});
   for(let i=0;i<12;i++) fence.push({x:2+frand()*316|0,offset:frand()*2|0,piece:frand()*3|0});
+  /* night stars — generated last so the field arrays above keep their exact
+     deterministic sequence. wy is a WORLD-y: 0 = top of the main scene, negative
+     = the mobile #sceneTop band above it, up to the horizon (YH). */
+  for(let i=0;i<90;i++) stars.push({x:frand()*W|0, wy:(frand()*(YH+170)-170)|0, ph:frand()*6.28, sp:1.4+frand()*2.6, b:0.45+frand()*0.55, big:frand()<0.16});
 
   /* =================================================================
      ANIMATION STATE
@@ -582,20 +626,50 @@ bottom: calc(4px + env(safe-area-inset-bottom));
     for(let y=0;y<=YH;y++) rv(0,y,W,1,skyAt(y));
   }
 
-  /* ---------- 2. sun with a soft warm glow ---------- */
-  function drawSun(cx,cy){
-    const tw=0.8+0.2*Math.sin(A.t*0.7);
-    rv(cx-18,cy-18,36,36,`rgba(255,247,208,${(0.04*tw).toFixed(3)})`);
-    rv(cx-12,cy-12,24,24,`rgba(255,244,198,${(0.07*tw).toFixed(3)})`);
-    rv(cx-8,cy-8,16,16,`rgba(255,247,212,${(0.10*tw).toFixed(3)})`);
-    rv(cx-7,cy-4,14,8,'#fff7d6'); rv(cx-4,cy-7,8,14,'#fff7d6');
-    rv(cx-5,cy-3,10,6,'#fffbe8'); rv(cx-3,cy-5,6,10,'#fffbe8');
-    rv(cx-2,cy-2,4,4,'#ffffff');
+  /* ---------- 2. moon — a pale crescent with a cool glow ---------- */
+  function drawMoon(cx,cy){
+    const tw=0.85+0.15*Math.sin(A.t*0.5);
+    /* soft cool halo */
+    rv(cx-16,cy-16,32,32,`rgba(170,188,236,${(0.045*tw).toFixed(3)})`);
+    rv(cx-11,cy-11,22,22,`rgba(190,206,240,${(0.06*tw).toFixed(3)})`);
+    rv(cx-8,cy-8,16,16,`rgba(206,220,248,${(0.09*tw).toFixed(3)})`);
+    const m='#e8ecf6', cut=`rgb(${SKY_MID[0]},${SKY_MID[1]},${SKY_MID[2]})`, cr='#bcc4dc';
+    /* full disk (stepped-corner round) */
+    rv(cx-4,cy-4,8,8,m);
+    rv(cx-5,cy-3,10,6,m);
+    rv(cx-3,cy-5,6,10,m);
+    /* carve a crescent by overdrawing a sky-coloured disk to the upper-right */
+    rv(cx-1,cy-5,7,9,cut);
+    rv(cx-2,cy-4,8,7,cut);
+    rv(cx,cy-6,5,11,cut);
+    /* a couple of craters on the lit crescent */
+    d(cx-4,cy-1,cr); d(cx-3,cy+2,cr); d(cx-3,cy-3,cr);
+    /* bright limb */
+    rv(cx-5,cy-2,1,4,'#f6f9ff');
+  }
+
+  /* ---------- night stars (twinkling) ---------- */
+  function drawStar(s,y){
+    const a=s.b*(0.5+0.5*Math.sin(A.t*s.sp+s.ph));
+    if(a<=0.02) return;
+    d(s.x,y,`rgba(236,240,255,${a.toFixed(2)})`);
+    if(s.big){
+      const c2=`rgba(236,240,255,${(a*0.45).toFixed(2)})`;
+      d(s.x-1,y,c2); d(s.x+1,y,c2); d(s.x,y-1,c2); d(s.x,y+1,c2);
+    }
+  }
+  /* main scene: stars whose world-y falls in the visible sky (0..just above hills) */
+  function drawStars(){
+    for(const s of stars){ if(s.wy<0 || s.wy>YH-12) continue; drawStar(s,s.wy); }
+  }
+  /* mobile #sceneTop: the sky band ABOVE the main scene (negative world-y) */
+  function drawStarsTop(){
+    for(const s of stars){ if(s.wy>=0) continue; drawStar(s,s.wy+180); }
   }
 
   /* ---------- 3. drifting clouds ---------- */
   function puff(cx,cy,s){
-    const w='#ffffff', sh='#dcecf4';
+    const w=TH.cloudW, sh=TH.cloudSh;
     rv(cx-10*s,cy+1,20*s,2,sh);
     rv(cx-11*s,cy-1,22*s,3,w);
     rv(cx-7*s,cy-4,15*s,4,w);
@@ -607,17 +681,6 @@ bottom: calc(4px + env(safe-area-inset-bottom));
     list.forEach(c=>{ let x=(c.x+A.t*c.speed)%(W+70); if(x<0)x+=W+70; puff(x-35,c.y,c.s); });
   }
 
-  /* ---------- 4. distant birds gliding by ---------- */
-  function drawBirds(){
-    const c='#54616f';
-    for(let i=0;i<7;i++){
-      let bx=((i*58+30)+A.t*(7+i*2))%(W+50); if(bx<0)bx+=W+50; bx-=25;
-      const by=10+i*6+Math.sin(A.t*0.5+i)*2;
-      if(Math.sin(A.t*7+i*1.3)>0){ d(bx-2,by+1,c);d(bx-1,by,c);d(bx,by+1,c);d(bx+1,by,c);d(bx+2,by+1,c); }
-      else { d(bx-2,by,c);d(bx-1,by+1,c);d(bx,by+1,c);d(bx+1,by+1,c);d(bx+2,by,c); }
-    }
-  }
-
   /* ---------- 5. distant rolling hills on the horizon ---------- */
   function drawHills(){
     for(let x=0;x<W;x++){ const top=(YH-(5+Math.sin(x*0.045)*3.5+Math.sin(x*0.11+1.3)*2.2))|0; rv(x,top,1,YH-top,P.hillFar); }
@@ -627,9 +690,9 @@ bottom: calc(4px + env(safe-area-inset-bottom));
   /* --- distant tree silhouettes along the horizon --- */
   function drawTrees(){
     trees.forEach(t=>{
-      rv(t.x-1,t.y,t.w,t.h,'#5a8844');
-      rv(t.x,t.y-2,1,2,'#4a7038');
-      rv(t.x-2,t.y+t.h-2,t.w+4,4,'#3a5c28');
+      rv(t.x-1,t.y,t.w,t.h,TH.treeA);
+      rv(t.x,t.y-2,1,2,TH.treeB);
+      rv(t.x-2,t.y+t.h-2,t.w+4,4,TH.treeC);
     });
   }
 
@@ -637,22 +700,23 @@ bottom: calc(4px + env(safe-area-inset-bottom));
   function drawFence(){
     fence.forEach(f=>{
       const x=f.x|0, by=(YH-8-f.offset)|0;
-      rv(x,by,1,8,'#5a4a30'); rv(x-2,by+3,5,1,'#6a5a3c'); d(x-1,by,'#4a3a20');
-      if(f.piece<1){ rv(x,by,13,1,'#5a4a30'); rv(x,by+3,13,1,'#6a5a3c'); }
+      rv(x,by,1,8,TH.fencePost); rv(x-2,by+3,5,1,TH.fenceRail); d(x-1,by,TH.fenceDark);
+      if(f.piece<1){ rv(x,by,13,1,TH.fencePost); rv(x,by+3,13,1,TH.fenceRail); }
     });
   }
 
   /* ---------- 6. the green field ground ---------- */
   function drawField(){
     for(let y=YH;y<H;y++) rv(0,y,W,1,lerpC(GR_FAR,GR_NEAR,(y-YH)/(H-YH)));
-    rv(0,YH,W,1,'rgba(225,242,246,0.40)');                 // hazy horizon glow
-    rv(34,YH+16,64,7,'rgba(160,214,118,0.10)');            // soft sun-lit patches
-    rv(150,YH+30,84,9,'rgba(160,214,118,0.10)');
-    rv(18,YH+54,96,12,'rgba(168,220,128,0.10)');
+    rv(0,YH,W,1,TH.horizonGlow);                           // hazy horizon glow
+    rv(34,YH+16,64,7,TH.fieldPatch);                       // soft lit patches
+    rv(150,YH+30,84,9,TH.fieldPatch);
+    rv(18,YH+54,96,12,TH.fieldPatch);
   }
 
   /* ---------- 7. grass tufts (each blade sways in the breeze) ---------- */
   function tuft(t){
+    const col=GCOLS[t.ci];
     for(let b=0;b<t.n;b++){
       const off=b-(t.n-1)/2;
       const bx=t.x+off*2;
@@ -662,9 +726,9 @@ bottom: calc(4px + env(safe-area-inset-bottom));
       for(let i=0;i<=bh;i++){
         const tt=i/bh;
         lx=Math.round(bx+Math.sin(A.sway*0.9+ph)*amp*tt*tt); ly=t.y-i;
-        d(lx,ly,t.col);
+        d(lx,ly,col);
       }
-      d(lx,ly,'#86d264');                                  // sun-lit tip
+      d(lx,ly,TH.grassTip);                                // sun-/moon-lit tip
     }
   }
   function drawGrass(list){ list.forEach(tuft); }
@@ -672,11 +736,12 @@ bottom: calc(4px + env(safe-area-inset-bottom));
   /* ---------- 8. wildflowers (bobbing on their stems) ---------- */
   function drawFlowers(){
     flowers.forEach(f=>{
-      rv(f.x,f.y-f.stem,1,f.stem,'#357a22');               // stem
+      const pair=FCOLS[f.fi], col=pair[0], cen=pair[1];
+      rv(f.x,f.y-f.stem,1,f.stem,TH.stem);                 // stem
       const fx=Math.round(f.x+Math.sin(A.sway*0.9+f.phase)*1.3), fy=f.y-f.stem;
-      d(fx,fy-1,f.col);d(fx-1,fy,f.col);d(fx+1,fy,f.col);d(fx,fy+1,f.col);
-      if(f.size>1){ d(fx-1,fy-1,f.col);d(fx+1,fy-1,f.col);d(fx-1,fy+1,f.col);d(fx+1,fy+1,f.col); }
-      d(fx,fy,f.cen);
+      d(fx,fy-1,col);d(fx-1,fy,col);d(fx+1,fy,col);d(fx,fy+1,col);
+      if(f.size>1){ d(fx-1,fy-1,col);d(fx+1,fy-1,col);d(fx-1,fy+1,col);d(fx+1,fy+1,col); }
+      d(fx,fy,cen);
     });
   }
 
@@ -699,8 +764,8 @@ bottom: calc(4px + env(safe-area-inset-bottom));
     d(tx+1,ty+85,P.tM);d(tx+5,ty+86,P.tM);d(tx+8,ty+85,P.tM);
     d(tx+60,ty+85,P.tM);d(tx+64,ty+86,P.tM);d(tx+67,ty+85,P.tM);
     /* leg spots */
-    rv(tx+14,ty+78,2,2,'#1e5014');rv(tx+25,ty+77,2,2,'#1e5014');
-    rv(tx+42,ty+78,2,2,'#1e5014');rv(tx+53,ty+77,2,2,'#1e5014');
+    rv(tx+14,ty+78,2,2,P.tSpot);rv(tx+25,ty+77,2,2,P.tSpot);
+    rv(tx+42,ty+78,2,2,P.tSpot);rv(tx+53,ty+77,2,2,P.tSpot);
     /* lap overlap */
     rv(tx+18,ty+73,34,11,P.tD);
     rv(tx+21,ty+74,28,8,P.tM);
@@ -711,13 +776,13 @@ bottom: calc(4px + env(safe-area-inset-bottom));
     rv(tx+18,ty+45+bo,34,22,P.tB);
     if(bo>0) rv(tx+18,ty+43+bo,34,2,P.tL);
     /* belly lighter patch */
-    rv(tx+24,ty+49+bo,22,14,'#50a840');
-    rv(tx+27,ty+52+bo,16,8,'#58b448');
+    rv(tx+24,ty+49+bo,22,14,P.tBelly);
+    rv(tx+27,ty+52+bo,16,8,P.tBelly2);
     /* belly warts */
-    rv(tx+21,ty+48+bo,3,2,'#3a8828');rv(tx+45,ty+46+bo,3,3,'#3a8828');
-    rv(tx+32,ty+55+bo,3,2,'#3a8828');rv(tx+39,ty+59+bo,2,2,'#3a8828');
-    rv(tx+20,ty+56+bo,2,2,'#3a8828');rv(tx+27,ty+60+bo,3,2,'#3a8828');
-    rv(tx+48,ty+53+bo,2,2,'#3a8828');
+    rv(tx+21,ty+48+bo,3,2,P.tWart);rv(tx+45,ty+46+bo,3,3,P.tWart);
+    rv(tx+32,ty+55+bo,3,2,P.tWart);rv(tx+39,ty+59+bo,2,2,P.tWart);
+    rv(tx+20,ty+56+bo,2,2,P.tWart);rv(tx+27,ty+60+bo,3,2,P.tWart);
+    rv(tx+48,ty+53+bo,2,2,P.tWart);
     /* torso side shading */
     rv(tx+11,ty+39+bo,3,34,P.tD);rv(tx+56,ty+39+bo,3,34,P.tD);
 
@@ -726,7 +791,7 @@ bottom: calc(4px + env(safe-area-inset-bottom));
     rv(tx+1,ty+41+bo,7,10,P.tM);
     rv(tx+62,ty+41+bo,7,10,P.tM);
     rv(tx+7,ty+38+bo,56,2,P.tL);
-    rv(tx+10,ty+39+bo,2,2,'#1e5014');rv(tx+57,ty+39+bo,2,2,'#1e5014');
+    rv(tx+10,ty+39+bo,2,2,P.tSpot);rv(tx+57,ty+39+bo,2,2,P.tSpot);
 
     /* --- Arms --- */
     /* left */
@@ -736,7 +801,7 @@ bottom: calc(4px + env(safe-area-inset-bottom));
     rv(tx-4,ty+78,4,4,P.tD);rv(tx,ty+79,4,3,P.tD);rv(tx+4,ty+78,4,4,P.tD);
     d(tx-3,ty+78,P.tM);d(tx+1,ty+79,P.tM);d(tx+5,ty+78,P.tM);
     rv(tx,ty+53+bo,6,6,P.tL);
-    rv(tx+1,ty+56+bo,2,2,'#1e5014');rv(tx-2,ty+65,2,2,'#1e5014');
+    rv(tx+1,ty+56+bo,2,2,P.tSpot);rv(tx-2,ty+65,2,2,P.tSpot);
     /* right */
     rv(tx+61,ty+49+bo,10,10,P.tM);
     rv(tx+62,ty+59+(bo>0?1:0),11,15,P.tM);
@@ -744,12 +809,12 @@ bottom: calc(4px + env(safe-area-inset-bottom));
     rv(tx+62,ty+78,4,4,P.tD);rv(tx+67,ty+79,4,3,P.tD);rv(tx+62,ty+78,4,4,P.tD);
     d(tx+63,ty+78,P.tM);d(tx+68,ty+79,P.tM);d(tx+63,ty+78,P.tM);
     rv(tx+63,ty+53+bo,6,6,P.tL);
-    rv(tx+66,ty+56+bo,2,2,'#1e5014');rv(tx+69,ty+65,2,2,'#1e5014');
+    rv(tx+66,ty+56+bo,2,2,P.tSpot);rv(tx+69,ty+65,2,2,P.tSpot);
 
     /* --- Neck --- */
     rv(tx+18,ty+31+bo,34,8,P.tM);
     rv(tx+21,ty+35+bo,28,2,P.tD);
-    rv(tx+24,ty+37+bo,22,1,'#1e5014');
+    rv(tx+24,ty+37+bo,22,1,P.tSpot);
 
     /* --- Head --- */
     rv(tx+15,ty+10,40,20,P.tM);
@@ -758,10 +823,10 @@ bottom: calc(4px + env(safe-area-inset-bottom));
     rv(tx+21,ty+7,28,6,P.tM);
     rv(tx+25,ty+4,20,4,P.tD);
     /* head spots */
-    rv(tx+21,ty+13,3,2,'#1e5014');rv(tx+41,ty+14,3,2,'#1e5014');
-    rv(tx+31,ty+10,2,2,'#1e5014');rv(tx+15,ty+20,2,2,'#1e5014');
-    rv(tx+50,ty+20,2,2,'#1e5014');rv(tx+35,ty+17,2,2,'#1e5014');
-    rv(tx+25,ty+21,2,2,'#1e5014');rv(tx+46,ty+15,2,2,'#1e5014');
+    rv(tx+21,ty+13,3,2,P.tSpot);rv(tx+41,ty+14,3,2,P.tSpot);
+    rv(tx+31,ty+10,2,2,P.tSpot);rv(tx+15,ty+20,2,2,P.tSpot);
+    rv(tx+50,ty+20,2,2,P.tSpot);rv(tx+35,ty+17,2,2,P.tSpot);
+    rv(tx+25,ty+21,2,2,P.tSpot);rv(tx+46,ty+15,2,2,P.tSpot);
     /* jaw line */
     rv(tx+13,ty+28,44,2,P.tD);
     /* chin */
@@ -783,8 +848,8 @@ bottom: calc(4px + env(safe-area-inset-bottom));
     rv(tx+43,ty+12,10,1,P.tL);
     rv(tx+15,ty+14,13,2,P.tE);
     rv(tx+42,ty+14,13,2,P.tE);
-    rv(tx+17,ty+16,10,1,'#1a4410');
-    rv(tx+43,ty+16,10,1,'#1a4410');
+    rv(tx+17,ty+16,10,1,P.tLid);
+    rv(tx+43,ty+16,10,1,P.tLid);
 
     /* nostrils */
     rv(tx+28,ty+20,3,3,P.tD);
@@ -808,25 +873,26 @@ bottom: calc(4px + env(safe-area-inset-bottom));
     rv(tx+4,ty+90,62,2,'rgba(0,0,0,0.15)');
   }
 
-  /* ---------- 16. ambient / post-processing (soft, sunny, peaceful) ---------- */
+  /* ---------- 16. ambient / post-processing (cool, moonlit, peaceful) ---------- */
   function drawAmbient(){
-    /* Top-edge effects (warm sun wash + top vignette) only on desktop: on mobile
-       the main scene's top edge is the *seam* with #sceneTop (mid-screen, not a
-       real edge), so tinting it there would make a visible line. */
+    /* Top-edge effects (cool moon wash + top vignette) only on desktop: on
+       mobile the main scene's top edge is the *seam* with #sceneTop (mid-screen,
+       not a real edge), so tinting it there would make a visible line. */
     if(!MQ.matches){
-      rv(0,0,W,46,'rgba(255,240,200,0.05)');     // warm sunlight wash from the sun
-      rv(0,0,90,30,'rgba(255,236,180,0.05)');
-      rv(0,0,W,3,'rgba(40,70,40,0.10)');         // top vignette
+      rv(0,0,W,46,'rgba(120,140,210,0.05)');   // cool moonlight wash from the moon
+      rv(0,0,90,30,'rgba(150,170,235,0.05)');
+      rv(0,0,W,3,'rgba(6,8,24,0.22)');         // top vignette
     }
-    /* gentle side/bottom vignette (real screen edges; soft, never gloomy) */
-    rv(0,H-4,W,4,'rgba(20,45,15,0.12)');
-    rv(0,0,5,H,'rgba(30,55,35,0.09)');
-    rv(W-5,0,5,H,'rgba(30,55,35,0.09)');
-    /* floating pollen motes drifting up in the sunlight */
+    /* gentle side/bottom vignette (real screen edges) */
+    rv(0,H-4,W,4,'rgba(4,6,20,0.32)');
+    rv(0,0,5,H,'rgba(6,8,24,0.22)');
+    rv(W-5,0,5,H,'rgba(6,8,24,0.22)');
+    /* blinking fireflies drifting over the field */
     motes.forEach(m=>{
       const x=(m.x+Math.sin(A.t*m.sp+m.phase)*m.drift)|0;
       let y=m.y-(A.t*3*m.sp); y=((y-YH)%(H-YH)+(H-YH))%(H-YH)+YH;
-      d(x,y|0,`rgba(255,250,214,${(0.28+0.30*Math.sin(A.t*2+m.phase)).toFixed(2)})`);
+      const a=0.12+0.6*Math.max(0,Math.sin(A.t*2.2+m.phase));
+      if(a>0.05) d(x,y|0,`rgba(196,238,150,${a.toFixed(2)})`);
     });
   }
 
@@ -897,7 +963,7 @@ bottom: calc(4px + env(safe-area-inset-bottom));
       const f = A.bubbleFrame;
       const w = (tw * f);
       const h = (th * f);
-      const bx = 170 - w;
+      const bx = TBUB_R - w;
 
       /* Toad Bubble position */
       let anchorY = 100;
@@ -996,7 +1062,7 @@ bottom: calc(4px + env(safe-area-inset-bottom));
   /* ---------- 16. text bubble ---------- */
   function drawBubble(){
     let f, tw, th, bx, by;
-    const fill = '#fdf8ec', border = '#d6c8a6';
+    const fill = TH.tbFill, border = TH.tbBorder;
 
     if (A.chatState === 'SWIPING_UP') {
       if (A.oldTh <= 0 || A.oldBy < -150) return;
@@ -1013,7 +1079,7 @@ bottom: calc(4px + env(safe-area-inset-bottom));
       const w = (tw * f)|0;
       const h = (th * f)|0;
       if(w < 4 || h < 4) return;
-      bx = (170 - w)|0;
+      bx = (TBUB_R - w)|0;
       const anchorY = A.anchorY || 100;
       by = (anchorY - (h * 0.64))|0;
     }
@@ -1089,7 +1155,7 @@ bottom: calc(4px + env(safe-area-inset-bottom));
 
   /* ---------- 17. User Bubbles ---------- */
   function drawUserBubble(){
-    const fill = '#f5edda', border = '#cdbd96';
+    const fill = TH.ubFill, border = TH.ubBorder;
 
     // 1. Draw Active Input Bubble
     if(A.userTh) {
@@ -1142,10 +1208,10 @@ bottom: calc(4px + env(safe-area-inset-bottom));
      ================================================================= */
   function render(){
     G.clearRect(0,0,W,H);
-    drawSky();                       // blue sky gradient
-    drawSun(52,26);
+    drawSky();                       // sky gradient (deep navy → hazy horizon)
+    drawStars();                     // twinkling stars
+    drawMoon(52,26);                 // crescent moon with a cool glow
     drawClouds(cloudsA);
-    drawBirds();
     drawHills();                     // rolling hills on the horizon
     drawTrees();                     // distant tree silhouettes
     drawFence();                     // wooden fence along the horizon
@@ -1154,7 +1220,7 @@ bottom: calc(4px + env(safe-area-inset-bottom));
     drawFlowers();
     if (!MQ.matches) drawToad();     // on mobile the toad is drawn in the corner instead
     drawGrass(grassF);               // foreground grass swaying in front of the toad
-    drawAmbient();                   // soft sunlight + pollen motes
+    drawAmbient();                   // cool moonlight wash + fireflies
     if (MQ.matches) {
       /* Mobile chat is pure DOM (#mobile-chat). The canvas bubble system
          (history + input frame + swipe-up sent bubble + toad reply bubble/tail)
@@ -1193,6 +1259,7 @@ bottom: calc(4px + env(safe-area-inset-bottom));
   }
   window.addEventListener('resize',resize);
   resize();
+
   requestAnimationFrame(loop);
 
   function escapeHTML(str) {
@@ -1206,7 +1273,7 @@ bottom: calc(4px + env(safe-area-inset-bottom));
     // Strip all newlines so the text flows perfectly smoothly as one continuous block
     safe = safe.replace(/\n+/g, ' ');
     safe = safe.replace(/\[([^\]]+)\]\((https?:\/\/[^\)]+)\)/g, '<a class="content-link" href="$2" target="_blank">$1</a>');
-    safe = safe.replace(/\*+([^\*]+)\*+/g, '<strong style="color: #9a6f1e;">$1</strong>');
+    safe = safe.replace(/\*+([^\*]+)\*+/g, '<strong class="md-b">$1</strong>');
     return safe;
   }
 
@@ -1254,14 +1321,32 @@ bottom: calc(4px + env(safe-area-inset-bottom));
   const sendBtn = document.getElementById('sendBtn');
 
   /* ---- Mobile chat log (portrait phones) ----
-     Each send rides in as a fresh `.mobile-exchange` at the very top of
-     #mobile-chat; older exchanges slide down. The user message sits on top,
+     Each send rides in as a fresh `.mobile-exchange` at the very bottom of
+     #mobile-chat; it rises up from the bottom edge and pushes older exchanges
+     upward out of view (scroll up to read them). The user message sits on top,
      the toad's reply is appended beneath it in the same container. On desktop
      these never run (the callers are guarded by `MQ.matches`),
      so the canvas swipe-up system is untouched. */
   const mobileChat = document.getElementById('mobile-chat');
   let mobileThink = null;       // the "..." toad bubble awaiting a real reply
   let mobileExchange = null;    // container for the in-progress exchange
+
+  function mobileScrollBottom() {
+    mobileChat.scrollTop = mobileChat.scrollHeight;
+  }
+  // True when the user is parked at (or near) the newest message rather than
+  // scrolled up reading history — used to avoid yanking them down on a reply.
+  function mobilePinnedBottom() {
+    return mobileChat.scrollHeight - mobileChat.scrollTop - mobileChat.clientHeight < 48;
+  }
+  // Bring a toad reply's TOP edge to the top of the log (with the same 12px gap
+  // as the container padding) so the reader starts at the beginning of the
+  // message, not its end. Browser clamps scrollTop for short/last replies.
+  function mobileScrollToTop(el) {
+    const cTop = mobileChat.getBoundingClientRect().top;
+    const eTop = el.getBoundingClientRect().top;
+    mobileChat.scrollTop += (eTop - cTop) - 12;
+  }
 
   function mobileAppend(text, role) {
     const msg = document.createElement('div');
@@ -1271,11 +1356,11 @@ bottom: calc(4px + env(safe-area-inset-bottom));
       mobileExchange = document.createElement('div');
       mobileExchange.className = 'mobile-exchange';
       mobileExchange.appendChild(msg);
-      mobileChat.insertBefore(mobileExchange, mobileChat.firstChild);
-      mobileChat.scrollTop = 0;   // keep the newest exchange in view
+      mobileChat.appendChild(mobileExchange);
     } else {
       (mobileExchange || mobileChat).appendChild(msg);
     }
+    mobileScrollBottom();   // keep the newest message in view at the bottom
     return msg;
   }
 
@@ -1291,7 +1376,7 @@ bottom: calc(4px + env(safe-area-inset-bottom));
     A.oldTw = A.targetTw * A.bubbleFrame;
     A.oldTh = A.targetTh * A.bubbleFrame;
     A.oldBy = (A.anchorY || 100) - (A.oldTh * 0.64);
-    A.oldBx = 170 - A.oldTw;
+    A.oldBx = TBUB_R - A.oldTw;
 
     // Set up detached sent message
     const sentMsgDom = document.getElementById('sentMessage');
@@ -1354,8 +1439,11 @@ bottom: calc(4px + env(safe-area-inset-bottom));
           showText(`Error: ${data.error}`);
           recordMessage('model', `Error: ${data.error}`);
           if (MQ.matches && mobileThink) {
-            mobileThink.textContent = 'Error: ' + data.error;
+            const pinned = mobilePinnedBottom();
+            const toadEl = mobileThink;
+            toadEl.textContent = 'Error: ' + data.error;
             mobileThink = null;
+            if (pinned) mobileScrollToTop(toadEl);
           }
           return;
         }
@@ -1365,8 +1453,11 @@ bottom: calc(4px + env(safe-area-inset-bottom));
         recordMessage('model', replyText);
         // mobile: swap "..." with actual reply
         if (MQ.matches && mobileThink) {
-          mobileThink.innerHTML = '<div>' + formatMessage(replyText) + '</div>';
+          const pinned = mobilePinnedBottom();
+          const toadEl = mobileThink;
+          toadEl.innerHTML = '<div>' + formatMessage(replyText) + '</div>';
           mobileThink = null;
+          if (pinned) mobileScrollToTop(toadEl);
         }
       })
       .catch(err => {
@@ -1374,8 +1465,11 @@ bottom: calc(4px + env(safe-area-inset-bottom));
         showText(m);
         recordMessage('model', m);
         if (MQ.matches && mobileThink) {
-          mobileThink.textContent = m;
+          const pinned = mobilePinnedBottom();
+          const toadEl = mobileThink;
+          toadEl.textContent = m;
           mobileThink = null;
+          if (pinned) mobileScrollToTop(toadEl);
         }
       });
 
@@ -1412,7 +1506,7 @@ bottom: calc(4px + env(safe-area-inset-bottom));
     el.className = 'histMsg';
     if (role === 'user') el.textContent = text;
     else el.innerHTML = '<div>' + formatMessage(text) + '</div>';
-    el.style.left   = ((10 / W) * 100) + '%';
+    el.style.left   = (((role === 'user' ? 10 : THIST_X) / W) * 100) + '%';
     el.style.width  = ((160 / W) * 100) + '%';
     el.style.height = 'auto';
     el.style.display = 'flex';
@@ -1480,9 +1574,10 @@ bottom: calc(4px + env(safe-area-inset-bottom));
     const n = historyCount();
     for (let i = 0; i < n; i++){
       const m = transcript[i];
-      const fill   = m.role === 'user' ? '#f5edda' : '#fdf8ec';
-      const border = m.role === 'user' ? '#cdbd96' : '#d6c8a6';
-      drawHistBox(10, Math.round(m._y + A.scroll), 160, Math.round(m.h), fill, border);
+      const fill   = m.role === 'user' ? TH.ubFill : TH.tbFill;
+      const border = m.role === 'user' ? TH.ubBorder : TH.tbBorder;
+      const hx     = m.role === 'user' ? 10 : THIST_X;
+      drawHistBox(hx, Math.round(m._y + A.scroll), 160, Math.round(m.h), fill, border);
     }
   }
 
