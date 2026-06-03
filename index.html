@@ -1,0 +1,1504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Wise Toad</title>
+  <meta name="description" content="A dark, moody, lo-fi pixel art scene featuring a meditating toad in a cluttered cyberpunk room at night.">
+  <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    html,body{width:100%;height:100%;overflow:hidden;background:#6ebae2}
+    #canvasWrapper { position:fixed; inset:0; width:100vw; height:100vh; overflow:hidden; z-index:0; }
+    canvas#scene{image-rendering:pixelated;image-rendering:crisp-edges;-ms-interpolation-mode:nearest-neighbor;display:block; width:100%; height:100%;}
+    #bubbleText, #sentMessage {
+      position: absolute;
+      z-index: 2;
+      display: none;
+      color: #4a4234;
+      font-family: 'VT323', monospace;
+      text-align: left;
+      line-height: 0.85;
+      padding: 0 2% 0.5%;
+      overflow-y: auto;
+      overflow-x: hidden;
+      pointer-events: auto;
+      text-shadow: none;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+    #sentMessage {
+      padding: 0 2%;
+    }
+    #bubbleText::-webkit-scrollbar, #sentMessage::-webkit-scrollbar {
+      display: none;
+    }
+    #userInput {
+      position: absolute;
+      z-index: 0;
+      background: transparent;
+      border: none;
+      color: #4a4234;
+      font-family: 'VT323', monospace;
+      text-align: left;
+      line-height: 0.85;
+      padding: 0.5% 6% 0.5% 2%;
+      overflow-y: auto;
+      pointer-events: auto;
+      text-shadow: none;
+      resize: none;
+      outline: none;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+    #userInput::-webkit-scrollbar { display: none; }
+    #userInput::placeholder { color: #a89878; }
+
+    #sendBtn {
+      position: absolute;
+      z-index: 0;
+      color: #a89878;
+      font-family: 'VT323', monospace;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: auto;
+      text-shadow: none;
+      user-select: none;
+      transition: color 0.2s;
+    }
+    #sendBtn:hover { color: #6a5e44; }
+    #sendBtn.active { color: #4a4234; }
+
+    /* --- previous exchanges: the SAME boxes, scrolled back into view ---
+       Transparent DOM text (the pixel bubble behind it is drawn on the
+       canvas, exactly like the live boxes). #histLayer is clipped by the
+       wrapper's overflow:hidden, and sits below the live overlays (z:2). */
+    #histLayer { position: absolute; inset: 0; pointer-events: none; z-index: 1; }
+    .histMsg {
+      position: absolute;
+      display: none;
+      flex-direction: column;
+      justify-content: center;
+      color: #4a4234;
+      font-family: 'VT323', monospace;
+      text-align: left;
+      line-height: 0.85;
+      padding: 0 2%;
+      overflow: hidden;
+      pointer-events: auto;
+      text-shadow: none;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+
+    a.content-link {
+      display: inline-block;
+      margin-top: 8px;
+      margin-bottom: 8px;
+      margin-right: 8px;
+      background: #edf3e1;
+      border: 1px solid #a9c48f;
+      color: #3a7d44;
+      text-decoration: none;
+      padding: 4px 10px;
+      border-radius: 2px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    a.content-link:hover {
+      background: #e0eccf;
+      color: #285c30;
+      border-color: #7fae67;
+    }
+
+    /* =====================================================================
+       MOBILE LAYOUT  (portrait phones — toad small at bottom-right,
+       input to its left, chat fills the space above)
+       ===================================================================== */
+    #mobile-chat,
+    #toadCorner,
+    #sceneTop,
+    #inputBubbleBg {
+      display: none;
+    }
+
+    @media (max-width: 768px) and (orientation: portrait) {
+      html, body {
+        display: block;
+        overflow: hidden;
+      }
+
+      /* the whole scene fills the screen as the backdrop. The sky-blue background
+         is insurance: if the two stacked canvases ever leave a sub-pixel gap at
+         their join, sky (not black) shows through. */
+      #canvasWrapper {
+        position: fixed !important;
+        inset: 0 !important;
+        left: 0 !important;
+        top: 0 !important;
+        width: 100vw !important;
+        height: 100vh !important;
+        z-index: 0;
+        overflow: hidden !important;
+        background: #6ebae2;         /* = SKY_MID (the colour at the canvas join) */
+      }
+      /* Show the left portion of the field (≈ grid x:0–165) across the full width,
+         anchored to the BOTTOM so the field fills the lower screen and the corner
+         toad sits grounded on the grass. */
+      canvas#scene {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 194vw !important;     /* 320/165 ≈ 1.94 → grid x:0–165 across the screen */
+        height: auto !important;     /* keeps the 16:9 ratio (≈109vw tall) */
+      }
+      /* the sky, stacked on top of #scene to fill the rest of the screen.
+         bottom = #scene's rendered height (194vw × 180/320 = 194vw × 0.5625) minus
+         2px so the two canvases OVERLAP slightly (no gap line). Keep 194vw in sync. */
+      #sceneTop {
+        display: block;
+        position: absolute;
+        left: 0;
+        bottom: calc(194vw * 0.5625 - 2px);
+        width: 194vw;
+        height: auto;
+        image-rendering: pixelated;
+        z-index: 0;
+      }
+
+      /* ONLY the toad — its own small canvas, bottom-right corner */
+      #toadCorner {
+        display: block;
+        position: fixed;
+        right: 4px;
+bottom: calc(4px + env(safe-area-inset-bottom));
+        width: 84px;
+        height: 98px;
+        z-index: 3;
+        image-rendering: pixelated;
+        pointer-events: none;
+      }
+
+      /* chat fills everything above the bottom strip (toad + input) */
+      #mobile-chat {
+        display: flex;
+        position: fixed;
+        top: env(safe-area-inset-top);
+        left: 0;
+        right: 0;
+        bottom: calc(108px + env(safe-area-inset-bottom));
+        flex-direction: column;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        padding: 12px 12px 4px;
+        gap: 0;
+        z-index: 1;
+      }
+
+      .mobile-exchange {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        margin-bottom: 14px;
+        animation: mobileSlideIn 0.25s ease-out;
+      }
+
+      @keyframes mobileSlideIn {
+        from { opacity: 0; transform: translateY(-8px); }
+        to   { opacity: 1; transform: translateY(0); }
+      }
+
+      .mobile-msg {
+        max-width: 88%;
+        padding: 5px 16px;
+        color: #4a4234;
+        font-family: 'VT323', monospace;
+        line-height: 1.25;
+        font-size: 19px;
+        word-wrap: break-word;
+        white-space: pre-wrap;
+        text-shadow: none;
+        position: relative;
+      }
+
+      .mobile-msg.user {
+        align-self: flex-start;
+        background: #f5edda;
+        border: 2px solid #cdbd96;
+      }
+      .mobile-msg.user::after {
+        content: '';
+        position: absolute;
+        bottom: 6px;
+        left: -8px;
+        width: 0;
+        height: 0;
+        border-top: 6px solid transparent;
+        border-bottom: 6px solid transparent;
+        border-right: 8px solid #cdbd96;
+      }
+      .mobile-msg.user::before {
+        content: '';
+        position: absolute;
+        bottom: 8px;
+        left: -5px;
+        width: 0;
+        height: 0;
+        border-top: 4px solid transparent;
+        border-bottom: 4px solid transparent;
+        border-right: 6px solid #f5edda;
+        z-index: 1;
+      }
+      .mobile-msg.toad {
+        align-self: flex-end;
+        background: #fdf8ec;
+        border: 2px solid #d6c8a6;
+      }
+      .mobile-msg.toad::after {
+        content: '';
+        position: absolute;
+        bottom: 6px;
+        right: -8px;
+        width: 0;
+        height: 0;
+        border-top: 6px solid transparent;
+        border-bottom: 6px solid transparent;
+        border-left: 8px solid #d6c8a6;
+      }
+      .mobile-msg.toad::before {
+        content: '';
+        position: absolute;
+        bottom: 8px;
+        right: -5px;
+        width: 0;
+        height: 0;
+        border-top: 4px solid transparent;
+        border-bottom: 4px solid transparent;
+        border-left: 6px solid #fdf8ec;
+        z-index: 1;
+      }
+      .mobile-msg a { color: #3a7d44; }
+      .mobile-msg .content-link {
+        font-size: 16px;
+        padding: 3px 8px;
+        margin-top: 6px;
+        margin-bottom: 4px;
+      }
+
+      /* input sits at bottom-left, to the left of the toad. Its background is
+         transparent: the pixel-art rounded bubble behind it (#inputBubbleBg)
+         provides the same stepped-corner shape as the desktop canvas bubble. */
+      #userInput {
+        position: fixed !important;
+        bottom: calc(30px + env(safe-area-inset-bottom));
+        left: 8px;
+        right: 124px;
+        width: auto !important;
+        height: 44px !important;
+        top: auto !important;
+        background: transparent;
+        border: none;
+        border-radius: 0;
+        z-index: 2;
+        font-size: 20px !important;
+        padding: 8px 36px 8px 12px;
+      }
+
+      /* Pixel-art rounded input bubble — drawn on a tiny 64×10 canvas
+         with the same blocky-corner primitives as the desktop bubble,
+         then scaled up via image-rendering: pixelated. No anti-aliasing. */
+      #inputBubbleBg {
+        display: block;
+        position: fixed;
+        bottom: calc(30px + env(safe-area-inset-bottom));
+        left: 8px;
+        right: 124px;
+        height: 44px;
+        z-index: 1;
+        pointer-events: none;
+        image-rendering: pixelated;
+      }
+
+      #sendBtn {
+        position: fixed !important;
+        bottom: calc(30px + env(safe-area-inset-bottom));
+        right: 98px;
+        width: 30px !important;
+        height: 44px !important;
+        top: auto !important;
+        left: auto !important;
+        z-index: 2;
+        font-size: 18px !important;
+      }
+
+      /* hide the desktop overlays */
+      #bubbleText, #sentMessage, #histLayer {
+        display: none !important;
+      }
+    }
+  </style>
+</head>
+<body>
+<div id="canvasWrapper">
+  <canvas id="scene"></canvas>
+  <canvas id="sceneTop" width="320" height="180"></canvas>
+  <div id="bubbleText"></div>
+  <div id="sentMessage"></div>
+  <canvas id="inputBubbleBg" width="64" height="10"></canvas>
+  <textarea id="userInput" placeholder="Speak to the Toad"></textarea>
+  <div id="sendBtn" title="Send">&gt;</div>
+  <div id="histLayer"></div>
+</div>
+<div id="mobile-chat"></div>
+<canvas id="toadCorner" width="84" height="98"></canvas>
+<script>
+(() => {
+  'use strict';
+
+  /* =================================================================
+     CANVAS SETUP
+     ================================================================= */
+  const C = document.getElementById('scene');
+  let G = C.getContext('2d');           // `let`: swapped to the toad-corner ctx below
+  const W = 320, H = 180;
+  C.width = W; C.height = H;
+  G.imageSmoothingEnabled = false;
+
+  /* Mobile (portrait): the room renders fullscreen here, and the toad alone is
+     re-rendered onto a small bottom-right canvas. Same media query as the CSS. */
+  const MQ = window.matchMedia('(max-width: 768px) and (orientation: portrait)');
+  const TC = document.getElementById('toadCorner');
+  const GT = TC.getContext('2d');
+  GT.imageSmoothingEnabled = false;
+  /* translate so the toad's bounding box (grid ~178,69 → 84×98) lands at the origin */
+  const TOAD_OX = 178, TOAD_OY = 69;
+  function renderToadCorner(){
+    GT.setTransform(1,0,0,1,0,0);
+    GT.clearRect(0,0,TC.width,TC.height);
+    GT.setTransform(1,0,0,1,-TOAD_OX,-TOAD_OY);
+    const prev = G; G = GT;   // primitives (rv/d/…) draw to whatever G points at
+    drawToad();
+    G = prev;
+  }
+
+  /* Mobile: pixel-art rounded input bubble — same blocky-corner pattern as
+     drawUserBubble, drawn on a tiny canvas (64×10 internal) and scaled up by
+     CSS with image-rendering: pixelated. No anti-aliasing = authentic pixel look. */
+  const IB = document.getElementById('inputBubbleBg');
+  const GI = IB.getContext('2d');
+  GI.imageSmoothingEnabled = false;
+  function drawInputBubble(){
+    const fill = '#f5edda', border = '#cdbd96';
+    const w = IB.width, h = IB.height;
+    GI.clearRect(0,0,w,h);
+    const prev = G; G = GI;
+    rv(2,0,w-4,h,fill);
+    rv(0,2,w,h-4,fill);
+    rv(1,1,w-2,h-2,fill);
+    rv(2,0,w-4,1,border); rv(2,h-1,w-4,1,border);
+    rv(0,2,1,h-4,border); rv(w-1,2,1,h-4,border);
+    d(1,0,border); d(0,1,border);
+    d(w-2,0,border); d(w-1,1,border);
+    d(1,h-1,border); d(0,h-2,border);
+    d(w-2,h-1,border); d(w-1,h-2,border);
+    G = prev;
+  }
+
+  /* Mobile only: an UPWARD extension of the room, stacked directly above #scene
+     (same 320-wide grid + same CSS width, so wall/seams/pipe line up exactly).
+     Its bottom edge (y=180) abuts the main scene's top edge (y=0). Drawn each
+     frame via the same G-swap trick so the neon/LEDs can breathe. */
+  const TOPC = document.getElementById('sceneTop');
+  const GTop = TOPC.getContext('2d');
+  GTop.imageSmoothingEnabled = false;
+  function renderSceneTop(){
+    GTop.setTransform(1,0,0,1,0,0);
+    GTop.clearRect(0,0,TOPC.width,TOPC.height);
+    const prev = G; G = GTop;
+    drawSceneTop();
+    G = prev;
+  }
+  /* Mobile: the sky continues upward above the field. #sceneTop sits directly
+     above #scene, so its rows map to world-y (y - 180): the bottom row (y≈180)
+     is worldY≈0 = drawSky()'s top colour, and it darkens smoothly toward the
+     screen top. Sampling the SAME skyAt() makes the two canvases one seamless
+     gradient — no value jump and no slope kink at the join. */
+  function drawSceneTop(){
+    const HT = 180;
+    for (let y = 0; y < HT; y++) rv(0, y, W, 1, skyAt(y - 180));
+    drawClouds(cloudsT);
+  }
+
+  /* =================================================================
+     PALETTE
+     ================================================================= */
+  const P = {
+    sky:   ['#050512','#070718','#0a0a22','#0e0e2c','#121038','#181248'],
+    bFar:  ['#2d2245','#332850','#2a2040','#352a50'],
+    bMid:  ['#1e1a35','#201c38','#1c1832'],
+    bNear: ['#101020','#0e0e1c','#0c0c18'],
+    wCyan:'#00ccee', wPink:'#dd4488', wOrange:'#dd8844',
+    wWhite:'#99aacc', wYellow:'#ddcc66',
+    fOut:'#5a3a14', fIn:'#7a5a28', fDk:'#3a1a08',
+    wall:'#1a1a2e', wallM:'#1e1e32', wallL:'#222238',
+    wallSide:'#141424',       /* left side-wall */
+    floorD:'#2a1a10', floorM:'#3a2818', floorL:'#4a3828', floorLn:'#1e1208',
+    crtB:'#2a2a3a', crtBD:'#1e1e2e', crtBT:'#32324a',
+    shD:'#16100a', shM:'#2a1f14', shL:'#3d2b1f', shSide:'#100c06',
+    tD:'#1a4414', tM:'#286020', tL:'#38842e', tB:'#489838', tE:'#0e0e0e',
+    note:'#8888a0', pin:'#cc4444',
+    spill:'#3e1212', cd:'#4a5588',
+    cup:'#7a2828', straw:'#ccccbb',
+    bottle:'#3a4a5a', bottleH:'#5a7a9a',
+    bookA:'#665544', bookB:'#886655', bookC:'#aa7766', bookD:'#554433',
+    /* --- peaceful grassy field --- */
+    hillFar:'#a9cf92', hillNear:'#8cc06c',
+  };
+
+  /* =================================================================
+     SCENE CONFIG  (backend-ready)
+     Lower angle + viewed from the right
+     ================================================================= */
+  const S = {
+    win: { x:78, y:2, w:140, h:64 },
+    ft: 3,
+    pd: [124, 170],
+    floorY: 80,
+    sideWallW: 10,              /* visible left side-wall width */
+    /* CRT TV — with 3D depth */
+    tv: {
+      stand: { x:12, y:66, w:68, h:12 },
+      body:  { x:16, y:22, w:60, h:44 },
+      screen:{ x:24, y:28, w:44, h:32 },
+      dp: 4,
+    },
+    rcv: { x:18, y:12, w:56, h:10, dp:3 },
+    /* bookshelf — with left-side 3D depth */
+    shelf: { x:274, y:0, w:46, h:180, dp:5 },
+    /* toad (slightly larger, prominent in lower-right) */
+    toad: { x:185, y:72 },
+    /* train */
+    train: { y:24, w:55, h:4, speed:15 },
+  };
+
+  /* =================================================================
+     DETERMINISTIC RANDOM
+     ================================================================= */
+  function mulberry(a){return ()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+
+  /* =================================================================
+     FIELD LAYOUT  (peaceful grassy field — generated once, deterministic)
+     ================================================================= */
+  const YH = 96;                                  // horizon: sky above, field below
+  const SKY_TOP=[72,152,216], SKY_MID=[110,186,226], SKY_HZ=[216,240,247];
+  const GR_FAR=[150,196,140], GR_NEAR=[84,160,60];
+  const GCOLS=['#3f8a2c','#4e9a36','#5fb040','#6cbf48','#2f7322'];
+  const FCOLS=[['#f6f6ec','#f4d24c'],['#f4d24c','#e8a82e'],['#ef93bb','#f6e070'],['#b487d6','#f6e070'],['#e8675e','#f4d24c'],['#fbfaf0','#e8a82e']];
+
+  const frand = mulberry(7);
+  const pick = a => a[(frand()*a.length)|0];
+  const grassB=[], grassF=[], flowers=[], cloudsA=[], cloudsT=[], motes=[], trees=[], fence=[];
+  for(let i=0;i<80;i++){ const y=(YH+4+frand()*75)|0; grassB.push({x:frand()*W|0,y,h:3+frand()*4+(y-YH)*0.05,phase:frand()*6.28,n:3,col:pick(GCOLS)}); }
+  for(let i=0;i<44;i++){ const y=(148+frand()*32)|0; grassF.push({x:frand()*W|0,y,h:9+frand()*9,phase:frand()*6.28,n:3+(frand()*3|0),col:pick(GCOLS)}); }
+  for(let i=0;i<35;i++){ const y=(YH+8+frand()*70)|0; const c=pick(FCOLS); flowers.push({x:frand()*W|0,y,col:c[0],cen:c[1],size:y>140?2:1,stem:(3+(y-YH)*0.06)|0,phase:frand()*6.28}); }
+  for(let i=0;i<7;i++) cloudsA.push({x:frand()*W|0,y:(12+frand()*38)|0,s:0.7+frand()*0.7,speed:1.4+frand()*1.8});
+  for(let i=0;i<7;i++) cloudsT.push({x:frand()*W|0,y:(20+frand()*128)|0,s:0.8+frand()*0.8,speed:1.1+frand()*1.6});
+  for(let i=0;i<25;i++) motes.push({x:frand()*W|0,y:(YH+frand()*(H-YH))|0,phase:frand()*6.28,sp:0.3+frand()*0.5,drift:2+frand()*4});
+  for(let i=0;i<14;i++) trees.push({x:15+frand()*290|0,y:YH-14-frand()*6|0,h:10+frand()*14,w:2+frand()*3|0});
+  for(let i=0;i<12;i++) fence.push({x:2+frand()*316|0,offset:frand()*2|0,piece:frand()*3|0});
+
+  /* =================================================================
+     ANIMATION STATE
+     ================================================================= */
+  const A = {
+    t:0, dt:0, last:0,
+    sway: 0,
+    breath: 0,
+    bubbleTarget: 0, bubbleFrame: 0, bubbleTimer: 0,
+    targetTw: 140, targetTh: 110, requestedTh: 110, calcUTh: 12,
+    scaleY: 1, scroll: 0, scrollTarget: 0, maxScroll: 0
+  };
+
+  /* =================================================================
+     HELPERS
+     ================================================================= */
+  const rv=(x,y,w,h,c)=>{G.fillStyle=c;G.fillRect(x|0,y|0,w|0,h|0)};
+  const d=(x,y,c)=>rv(x,y,1,1,c);
+  drawInputBubble(); // render the mobile input bubble once (static pixel art)
+
+  /* --- Bresenham pixel-line (only draws within yMin..yMax) --- */
+  function pxLine(x0,y0,x1,y1,c,yMin,yMax){
+    x0|=0;y0|=0;x1|=0;y1|=0;
+    const dx=Math.abs(x1-x0),dy=Math.abs(y1-y0);
+    const sx=x0<x1?1:-1, sy=y0<y1?1:-1;
+    let err=dx-dy;
+    for(;;){
+      if(y0>=yMin&&y0<=yMax&&x0>=0&&x0<W) d(x0,y0,c);
+      if(x0===x1&&y0===y1) break;
+      const e2=2*err;
+      if(e2>-dy){err-=dy;x0+=sx}
+      if(e2<dx){err+=dx;y0+=sy}
+    }
+  }
+
+  /* --- 3D box — right side + top visible (isometric, viewed from lower-right) --- */
+  function boxR(x,y,w,h,dp,fc,rc,tc){
+    for(let i=0;i<dp;i++) rv(x+i+1,y-i-1,w,1,tc);     /* top face */
+    for(let i=0;i<dp;i++) rv(x+w+i,y-i,1,h,rc);        /* right face */
+    rv(x,y,w,h,fc);                                      /* front face */
+  }
+
+  /* --- 3D box — left side + top visible (bookshelf on the right wall) --- */
+  function boxL(x,y,w,h,dp,fc,lc,tc){
+    for(let i=0;i<dp;i++) rv(x-i-1,y-i-1,w,1,tc);      /* top face */
+    for(let i=0;i<dp;i++) rv(x-i-1,y-i,1,h,lc);         /* left face */
+    rv(x,y,w,h,fc);                                      /* front face */
+  }
+
+  /* =================================================================
+     DRAWING LAYERS — a peaceful grassy field under a blue sky
+     ================================================================= */
+
+  /* smooth gradient helper: lerp between two [r,g,b] colours */
+  function lerpC(a,b,t){ return `rgb(${(a[0]+(b[0]-a[0])*t)|0},${(a[1]+(b[1]-a[1])*t)|0},${(a[2]+(b[2]-a[2])*t)|0})`; }
+
+  /* ONE continuous sky gradient as a function of world-y: SKY_MID at the main
+     scene's top (worldY 0) → SKY_HZ at the horizon (worldY = YH), extended
+     linearly upward (negative worldY, used by the mobile #sceneTop) and clamped
+     to gamut. Both #scene and #sceneTop sample this, so there is no seam. */
+  function skyAt(wy){
+    const t=wy/YH, cl=v=>v<0?0:v>255?255:v|0;
+    return `rgb(${cl(SKY_MID[0]+(SKY_HZ[0]-SKY_MID[0])*t)},${cl(SKY_MID[1]+(SKY_HZ[1]-SKY_MID[1])*t)},${cl(SKY_MID[2]+(SKY_HZ[2]-SKY_MID[2])*t)})`;
+  }
+
+  /* ---------- 1. sky (gradient down to the hazy horizon) ---------- */
+  function drawSky(){
+    for(let y=0;y<=YH;y++) rv(0,y,W,1,skyAt(y));
+  }
+
+  /* ---------- 2. sun with a soft warm glow ---------- */
+  function drawSun(cx,cy){
+    const tw=0.8+0.2*Math.sin(A.t*0.7);
+    rv(cx-18,cy-18,36,36,`rgba(255,247,208,${(0.04*tw).toFixed(3)})`);
+    rv(cx-12,cy-12,24,24,`rgba(255,244,198,${(0.07*tw).toFixed(3)})`);
+    rv(cx-8,cy-8,16,16,`rgba(255,247,212,${(0.10*tw).toFixed(3)})`);
+    rv(cx-7,cy-4,14,8,'#fff7d6'); rv(cx-4,cy-7,8,14,'#fff7d6');
+    rv(cx-5,cy-3,10,6,'#fffbe8'); rv(cx-3,cy-5,6,10,'#fffbe8');
+    rv(cx-2,cy-2,4,4,'#ffffff');
+  }
+
+  /* ---------- 3. drifting clouds ---------- */
+  function puff(cx,cy,s){
+    const w='#ffffff', sh='#dcecf4';
+    rv(cx-10*s,cy+1,20*s,2,sh);
+    rv(cx-11*s,cy-1,22*s,3,w);
+    rv(cx-7*s,cy-4,15*s,4,w);
+    rv(cx-1*s,cy-6,10*s,4,w);
+    rv(cx+5*s,cy-3,8*s,3,w);
+    rv(cx-13*s,cy-1,5*s,2,w);
+  }
+  function drawClouds(list){
+    list.forEach(c=>{ let x=(c.x+A.t*c.speed)%(W+70); if(x<0)x+=W+70; puff(x-35,c.y,c.s); });
+  }
+
+  /* ---------- 4. distant birds gliding by ---------- */
+  function drawBirds(){
+    const c='#54616f';
+    for(let i=0;i<7;i++){
+      let bx=((i*58+30)+A.t*(7+i*2))%(W+50); if(bx<0)bx+=W+50; bx-=25;
+      const by=10+i*6+Math.sin(A.t*0.5+i)*2;
+      if(Math.sin(A.t*7+i*1.3)>0){ d(bx-2,by+1,c);d(bx-1,by,c);d(bx,by+1,c);d(bx+1,by,c);d(bx+2,by+1,c); }
+      else { d(bx-2,by,c);d(bx-1,by+1,c);d(bx,by+1,c);d(bx+1,by+1,c);d(bx+2,by,c); }
+    }
+  }
+
+  /* ---------- 5. distant rolling hills on the horizon ---------- */
+  function drawHills(){
+    for(let x=0;x<W;x++){ const top=(YH-(5+Math.sin(x*0.045)*3.5+Math.sin(x*0.11+1.3)*2.2))|0; rv(x,top,1,YH-top,P.hillFar); }
+    for(let x=0;x<W;x++){ const top=(YH-(3+Math.sin(x*0.07+2.5)*2.4+Math.sin(x*0.19)*1.5))|0; rv(x,top,1,YH-top,P.hillNear); }
+  }
+
+  /* --- distant tree silhouettes along the horizon --- */
+  function drawTrees(){
+    trees.forEach(t=>{
+      rv(t.x-1,t.y,t.w,t.h,'#5a8844');
+      rv(t.x,t.y-2,1,2,'#4a7038');
+      rv(t.x-2,t.y+t.h-2,t.w+4,4,'#3a5c28');
+    });
+  }
+
+  /* --- wooden fence posts along the horizon --- */
+  function drawFence(){
+    fence.forEach(f=>{
+      const x=f.x|0, by=(YH-8-f.offset)|0;
+      rv(x,by,1,8,'#5a4a30'); rv(x-2,by+3,5,1,'#6a5a3c'); d(x-1,by,'#4a3a20');
+      if(f.piece<1){ rv(x,by,13,1,'#5a4a30'); rv(x,by+3,13,1,'#6a5a3c'); }
+    });
+  }
+
+  /* ---------- 6. the green field ground ---------- */
+  function drawField(){
+    for(let y=YH;y<H;y++) rv(0,y,W,1,lerpC(GR_FAR,GR_NEAR,(y-YH)/(H-YH)));
+    rv(0,YH,W,1,'rgba(225,242,246,0.40)');                 // hazy horizon glow
+    rv(34,YH+16,64,7,'rgba(160,214,118,0.10)');            // soft sun-lit patches
+    rv(150,YH+30,84,9,'rgba(160,214,118,0.10)');
+    rv(18,YH+54,96,12,'rgba(168,220,128,0.10)');
+  }
+
+  /* ---------- 7. grass tufts (each blade sways in the breeze) ---------- */
+  function tuft(t){
+    for(let b=0;b<t.n;b++){
+      const off=b-(t.n-1)/2;
+      const bx=t.x+off*2;
+      const bh=Math.max(2,(t.h-Math.abs(off)*1.4))|0;
+      const ph=t.phase+b*0.6, amp=bh*0.22;
+      let lx=bx,ly=t.y;
+      for(let i=0;i<=bh;i++){
+        const tt=i/bh;
+        lx=Math.round(bx+Math.sin(A.sway*0.9+ph)*amp*tt*tt); ly=t.y-i;
+        d(lx,ly,t.col);
+      }
+      d(lx,ly,'#86d264');                                  // sun-lit tip
+    }
+  }
+  function drawGrass(list){ list.forEach(tuft); }
+
+  /* ---------- 8. wildflowers (bobbing on their stems) ---------- */
+  function drawFlowers(){
+    flowers.forEach(f=>{
+      rv(f.x,f.y-f.stem,1,f.stem,'#357a22');               // stem
+      const fx=Math.round(f.x+Math.sin(A.sway*0.9+f.phase)*1.3), fy=f.y-f.stem;
+      d(fx,fy-1,f.col);d(fx-1,fy,f.col);d(fx+1,fy,f.col);d(fx,fy+1,f.col);
+      if(f.size>1){ d(fx-1,fy-1,f.col);d(fx+1,fy-1,f.col);d(fx-1,fy+1,f.col);d(fx+1,fy+1,f.col); }
+      d(fx,fy,f.cen);
+    });
+  }
+
+  /* ---------- 15. TOAD (the star of the show) ---------- */
+  function drawToad(){
+    const tx=S.toad.x, ty=S.toad.y;
+    const bo=(Math.sin(A.breath)*1)|0;
+
+    /* --- Crossed legs (lotus) --- */
+    rv(tx+8,ty+76,25,10,P.tM);
+    rv(tx+36,ty+76,25,10,P.tM);
+    rv(tx+10,ty+77,22,7,P.tL);
+    rv(tx+38,ty+77,22,7,P.tL);
+    /* feet peeking out */
+    rv(tx+1,ty+80,10,7,P.tD);
+    rv(tx+59,ty+80,10,7,P.tD);
+    /* toes */
+    rv(tx+1,ty+85,3,3,P.tD);rv(tx+4,ty+86,3,2,P.tD);rv(tx+8,ty+85,3,3,P.tD);
+    rv(tx+60,ty+85,3,3,P.tD);rv(tx+63,ty+86,3,2,P.tD);rv(tx+67,ty+85,3,3,P.tD);
+    d(tx+1,ty+85,P.tM);d(tx+5,ty+86,P.tM);d(tx+8,ty+85,P.tM);
+    d(tx+60,ty+85,P.tM);d(tx+64,ty+86,P.tM);d(tx+67,ty+85,P.tM);
+    /* leg spots */
+    rv(tx+14,ty+78,2,2,'#1e5014');rv(tx+25,ty+77,2,2,'#1e5014');
+    rv(tx+42,ty+78,2,2,'#1e5014');rv(tx+53,ty+77,2,2,'#1e5014');
+    /* lap overlap */
+    rv(tx+18,ty+73,34,11,P.tD);
+    rv(tx+21,ty+74,28,8,P.tM);
+
+    /* --- Body / torso (breathing) --- */
+    rv(tx+11,ty+38+bo,48,36,P.tM);
+    rv(tx+15,ty+42+bo,40,28,P.tL);
+    rv(tx+18,ty+45+bo,34,22,P.tB);
+    if(bo>0) rv(tx+18,ty+43+bo,34,2,P.tL);
+    /* belly lighter patch */
+    rv(tx+24,ty+49+bo,22,14,'#50a840');
+    rv(tx+27,ty+52+bo,16,8,'#58b448');
+    /* belly warts */
+    rv(tx+21,ty+48+bo,3,2,'#3a8828');rv(tx+45,ty+46+bo,3,3,'#3a8828');
+    rv(tx+32,ty+55+bo,3,2,'#3a8828');rv(tx+39,ty+59+bo,2,2,'#3a8828');
+    rv(tx+20,ty+56+bo,2,2,'#3a8828');rv(tx+27,ty+60+bo,3,2,'#3a8828');
+    rv(tx+48,ty+53+bo,2,2,'#3a8828');
+    /* torso side shading */
+    rv(tx+11,ty+39+bo,3,34,P.tD);rv(tx+56,ty+39+bo,3,34,P.tD);
+
+    /* --- Shoulders --- */
+    rv(tx+6,ty+38+bo,58,6,P.tM);
+    rv(tx+1,ty+41+bo,7,10,P.tM);
+    rv(tx+62,ty+41+bo,7,10,P.tM);
+    rv(tx+7,ty+38+bo,56,2,P.tL);
+    rv(tx+10,ty+39+bo,2,2,'#1e5014');rv(tx+57,ty+39+bo,2,2,'#1e5014');
+
+    /* --- Arms --- */
+    /* left */
+    rv(tx-1,ty+49+bo,10,10,P.tM);
+    rv(tx-3,ty+59+(bo>0?1:0),11,15,P.tM);
+    rv(tx-3,ty+74,11,6,P.tD);
+    rv(tx-4,ty+78,4,4,P.tD);rv(tx,ty+79,4,3,P.tD);rv(tx+4,ty+78,4,4,P.tD);
+    d(tx-3,ty+78,P.tM);d(tx+1,ty+79,P.tM);d(tx+5,ty+78,P.tM);
+    rv(tx,ty+53+bo,6,6,P.tL);
+    rv(tx+1,ty+56+bo,2,2,'#1e5014');rv(tx-2,ty+65,2,2,'#1e5014');
+    /* right */
+    rv(tx+61,ty+49+bo,10,10,P.tM);
+    rv(tx+62,ty+59+(bo>0?1:0),11,15,P.tM);
+    rv(tx+62,ty+74,11,6,P.tD);
+    rv(tx+62,ty+78,4,4,P.tD);rv(tx+67,ty+79,4,3,P.tD);rv(tx+62,ty+78,4,4,P.tD);
+    d(tx+63,ty+78,P.tM);d(tx+68,ty+79,P.tM);d(tx+63,ty+78,P.tM);
+    rv(tx+63,ty+53+bo,6,6,P.tL);
+    rv(tx+66,ty+56+bo,2,2,'#1e5014');rv(tx+69,ty+65,2,2,'#1e5014');
+
+    /* --- Neck --- */
+    rv(tx+18,ty+31+bo,34,8,P.tM);
+    rv(tx+21,ty+35+bo,28,2,P.tD);
+    rv(tx+24,ty+37+bo,22,1,'#1e5014');
+
+    /* --- Head --- */
+    rv(tx+15,ty+10,40,20,P.tM);
+    rv(tx+11,ty+14,48,14,P.tM);
+    rv(tx+18,ty+11,34,17,P.tL);
+    rv(tx+21,ty+7,28,6,P.tM);
+    rv(tx+25,ty+4,20,4,P.tD);
+    /* head spots */
+    rv(tx+21,ty+13,3,2,'#1e5014');rv(tx+41,ty+14,3,2,'#1e5014');
+    rv(tx+31,ty+10,2,2,'#1e5014');rv(tx+15,ty+20,2,2,'#1e5014');
+    rv(tx+50,ty+20,2,2,'#1e5014');rv(tx+35,ty+17,2,2,'#1e5014');
+    rv(tx+25,ty+21,2,2,'#1e5014');rv(tx+46,ty+15,2,2,'#1e5014');
+    /* jaw line */
+    rv(tx+13,ty+28,44,2,P.tD);
+    /* chin */
+    rv(tx+21,ty+29,28,2,P.tM);
+    rv(tx+24,ty+31,22,1,P.tD);
+
+    /* eye bumps */
+    rv(tx+10,ty+1,15,10,P.tM);
+    rv(tx+45,ty+1,15,10,P.tM);
+    rv(tx+13,ty,11,6,P.tD);
+    rv(tx+48,ty,11,6,P.tD);
+    rv(tx+14,ty+1,8,2,P.tL);
+    rv(tx+49,ty+1,8,2,P.tL);
+
+    /* closed eyes (detailed) */
+    rv(tx+15,ty+12,13,3,P.tD);
+    rv(tx+42,ty+12,13,3,P.tD);
+    rv(tx+17,ty+12,10,1,P.tL);
+    rv(tx+43,ty+12,10,1,P.tL);
+    rv(tx+15,ty+14,13,2,P.tE);
+    rv(tx+42,ty+14,13,2,P.tE);
+    rv(tx+17,ty+16,10,1,'#1a4410');
+    rv(tx+43,ty+16,10,1,'#1a4410');
+
+    /* nostrils */
+    rv(tx+28,ty+20,3,3,P.tD);
+    rv(tx+39,ty+20,3,3,P.tD);
+    rv(tx+29,ty+21,1,1,'#0e0e0e');
+    rv(tx+40,ty+21,1,1,'#0e0e0e');
+
+    /* mouth */
+    rv(tx+25,ty+25,20,2,P.tD);
+    rv(tx+24,ty+25,2,1,P.tD);rv(tx+44,ty+25,2,1,P.tD);
+    d(tx+23,ty+24,P.tM);d(tx+46,ty+24,P.tM);
+
+    /* ambient highlight */
+    rv(tx+22,ty+1,26,2,'rgba(80,120,200,0.18)');
+    rv(tx+13,ty+4,8,2,'rgba(80,120,200,0.10)');
+    rv(tx+49,ty+4,8,2,'rgba(80,120,200,0.10)');
+    rv(tx+13,ty+15,17,8,'rgba(30,100,220,0.06)');
+
+    /* ground shadow */
+    rv(tx-3,ty+88,76,3,'rgba(0,0,0,0.30)');
+    rv(tx+4,ty+90,62,2,'rgba(0,0,0,0.15)');
+  }
+
+  /* ---------- 16. ambient / post-processing (soft, sunny, peaceful) ---------- */
+  function drawAmbient(){
+    /* Top-edge effects (warm sun wash + top vignette) only on desktop: on mobile
+       the main scene's top edge is the *seam* with #sceneTop (mid-screen, not a
+       real edge), so tinting it there would make a visible line. */
+    if(!MQ.matches){
+      rv(0,0,W,46,'rgba(255,240,200,0.05)');     // warm sunlight wash from the sun
+      rv(0,0,90,30,'rgba(255,236,180,0.05)');
+      rv(0,0,W,3,'rgba(40,70,40,0.10)');         // top vignette
+    }
+    /* gentle side/bottom vignette (real screen edges; soft, never gloomy) */
+    rv(0,H-4,W,4,'rgba(20,45,15,0.12)');
+    rv(0,0,5,H,'rgba(30,55,35,0.09)');
+    rv(W-5,0,5,H,'rgba(30,55,35,0.09)');
+    /* floating pollen motes drifting up in the sunlight */
+    motes.forEach(m=>{
+      const x=(m.x+Math.sin(A.t*m.sp+m.phase)*m.drift)|0;
+      let y=m.y-(A.t*3*m.sp); y=((y-YH)%(H-YH)+(H-YH))%(H-YH)+YH;
+      d(x,y|0,`rgba(255,250,214,${(0.28+0.30*Math.sin(A.t*2+m.phase)).toFixed(2)})`);
+    });
+  }
+
+  /* =================================================================
+     ANIMATION UPDATE
+     ================================================================= */
+  function update(dt){
+    A.t+=dt;
+    A.sway+=dt*1.1;       // wind for the grass / flowers
+    A.breath+=dt*1.4;     // toad breathing
+
+    if(A.bubbleFrame !== A.bubbleTarget) {
+      A.bubbleTimer += dt;
+      if(A.bubbleTimer > 0.05) {
+        A.bubbleTimer = 0;
+        A.bubbleFrame += Math.sign(A.bubbleTarget - A.bubbleFrame) * 0.25;
+        if(A.bubbleFrame < 0) A.bubbleFrame = 0;
+        if(A.bubbleFrame > 1) A.bubbleFrame = 1;
+      }
+    }
+
+    /* User Input Sync (Always active) */
+    const uInput = document.getElementById('userInput');
+    const canvasH = document.getElementById('canvasWrapper').clientHeight;
+    const scaleY = canvasH / H;
+    A.scaleY = scaleY;
+    uInput.style.fontSize = (6.5 * scaleY) + 'px';
+    
+    A.userTh = Math.max(10, Math.min(45, A.calcUTh || 10));
+    const uTw = 160, uTh = A.userTh;
+    const ubx = 10, uby = 170 - uTh;
+    
+    uInput.style.left = ((ubx / W) * 100) + '%';
+    uInput.style.top = ((uby / H) * 100) + '%';
+    uInput.style.width = ((uTw / W) * 100) + '%';
+    uInput.style.height = ((uTh / H) * 100) + '%';
+    
+    const sendBtn = document.getElementById('sendBtn');
+    sendBtn.style.left = (((ubx + uTw - 16) / W) * 100) + '%';
+    sendBtn.style.top = ((uby / H) * 100) + '%';
+    sendBtn.style.width = ((16 / W) * 100) + '%';
+    sendBtn.style.height = ((uTh / H) * 100) + '%';
+    sendBtn.style.fontSize = (8 * scaleY) + 'px';
+
+    /* sync DOM text */
+    const bText = document.getElementById('bubbleText');
+    if (A.bubbleFrame === 0) {
+      bText.style.display = 'none';
+    } else {
+      bText.style.display = 'flex';
+      bText.style.flexDirection = 'column';
+
+      let currentTopLimit = 5;
+      const gap = 8;
+      if (A.sentText) {
+        // Limit toad growth so it never squashes the sent message
+        // We add an extra +8 to the limit to account for the exclusion zone which might push the bubble up!
+        currentTopLimit = Math.max(5, A.sentBoxY + A.sentRequestedTh + gap + 8);
+      }
+      A.targetTh = Math.min(A.requestedTh || 110, uby - currentTopLimit - gap);
+      // When the text is taller than the box it has to fit in, centering pushes
+      // the first lines above the top edge where they're clipped and can't be
+      // scrolled to. Anchor to the top in that case so it reads from line one.
+      const textOverflows = A.requestedTh > A.targetTh + 0.5;
+      bText.style.justifyContent = textOverflows ? 'flex-start' : 'center';
+
+      const tw = A.targetTw || 160, th = A.targetTh;
+      const f = A.bubbleFrame;
+      const w = (tw * f);
+      const h = (th * f);
+      const bx = 170 - w;
+
+      /* Toad Bubble position */
+      let anchorY = 100;
+      const toadBottom = anchorY + (h * 0.36);
+      if (toadBottom + gap > uby) {
+        anchorY -= (toadBottom + gap - uby);
+      }
+
+      // Exclusion zone: prevent awkward tail intersections with rounded corners
+      let proposedBottom = anchorY + (h * 0.36);
+      if (proposedBottom >= 100 && proposedBottom <= 106) {
+        anchorY -= (proposedBottom - 99);
+      }
+
+      A.anchorY = anchorY;
+      let by = anchorY - (h * 0.64);
+
+      // Physics: Sent message NEVER squashes.
+      if (A.sentText && A.chatState !== 'SWIPING_UP') {
+        A.sentTh = A.sentRequestedTh;
+
+        // If the toad's top overlaps the sent message, push the toad down!
+        const requiredBy = A.sentBoxY + A.sentTh + gap;
+        if (by < requiredBy) {
+          anchorY += (requiredBy - by);
+          by = requiredBy;
+          A.anchorY = anchorY;
+        }
+      }
+
+      if (A.chatState === 'SWIPING_UP') {
+        bText.style.display = (A.oldBy < -150 || !A.oldTh) ? 'none' : 'flex';
+        bText.style.left = ((A.oldBx / W) * 100) + '%';
+        bText.style.top = ((A.oldBy / H) * 100) + '%';
+        bText.style.width = ((A.oldTw / W) * 100) + '%';
+        bText.style.height = ((A.oldTh / H) * 100) + '%';
+        bText.style.opacity = Math.max(0, 1 + (A.oldBy / 50));
+      } else {
+        bText.style.left = ((bx / W) * 100) + '%';
+        bText.style.top = (((by + A.scroll) / H) * 100) + '%';
+        bText.style.width = ((w / W) * 100) + '%';
+        bText.style.height = ((h / H) * 100) + '%';
+
+        const wrapperH = document.getElementById('canvasWrapper').clientHeight;
+        const scaleY = wrapperH / H;
+        bText.style.fontSize = (6.5 * scaleY * Math.max(0.1, f)) + 'px';
+        // A little breathing room at the top while overflowing and top-anchored,
+        // so the first line isn't flush against the bubble's border.
+        bText.style.paddingTop = textOverflows ? (4 * scaleY * Math.max(0.1, f)) + 'px' : '';
+        bText.style.opacity = Math.pow(f, 3);
+      }
+    }
+
+    // Animate SWIPING_UP
+    if (A.chatState === 'SWIPING_UP') {
+      const speed = 350 * dt;
+      if (A.oldBy > -160) A.oldBy -= speed * 1.5;
+
+      const targetSentY = 15;
+      if (A.sentBoxY > targetSentY) {
+        A.sentBoxY -= speed;
+        if (A.sentBoxY < targetSentY) A.sentBoxY = targetSentY;
+      }
+      // maintain requested height during swipe
+      A.sentTh = A.sentRequestedTh;
+    }
+
+    // Sync sentMessage DOM
+    const sText = document.getElementById('sentMessage');
+    if (A.sentText) {
+      sText.style.display = 'flex';
+      sText.style.flexDirection = 'column';
+      sText.style.justifyContent = 'center';
+
+      const sWidth = 160;
+      const sbx = 10;
+
+      sText.style.left = ((sbx / W) * 100) + '%';
+      sText.style.top = (((A.sentBoxY + A.scroll) / H) * 100) + '%';
+      sText.style.width = ((sWidth / W) * 100) + '%';
+      sText.style.height = ((A.sentTh / H) * 100) + '%';
+
+      const wrapperH = document.getElementById('canvasWrapper').clientHeight;
+      const scaleY = wrapperH / H;
+      sText.style.fontSize = (6.5 * scaleY) + 'px';
+    } else {
+      sText.style.display = 'none';
+    }
+
+    /* scroll-back: ease the view offset, then place the past boxes */
+    A.scroll += (A.scrollTarget - A.scroll) * Math.min(1, dt * 15);
+    if (Math.abs(A.scrollTarget - A.scroll) < 0.3) A.scroll = A.scrollTarget;
+    syncHistory();
+  }
+
+  /* ---------- 16. text bubble ---------- */
+  function drawBubble(){
+    let f, tw, th, bx, by;
+    const fill = '#fdf8ec', border = '#d6c8a6';
+
+    if (A.chatState === 'SWIPING_UP') {
+      if (A.oldTh <= 0 || A.oldBy < -150) return;
+      f = 1;
+      tw = A.oldTw;
+      th = A.oldTh;
+      bx = A.oldBx|0;
+      by = A.oldBy|0;
+    } else {
+      if(A.bubbleFrame === 0) return;
+      f = A.bubbleFrame;
+      tw = A.targetTw || 160;
+      th = A.targetTh || 110;
+      const w = (tw * f)|0;
+      const h = (th * f)|0;
+      if(w < 4 || h < 4) return;
+      bx = (170 - w)|0;
+      const anchorY = A.anchorY || 100;
+      by = (anchorY - (h * 0.64))|0;
+    }
+
+    const w = (tw * f)|0;
+    const h = (th * f)|0;
+    by += A.scroll;   // slide down with the scroll-back view (0 in normal use)
+
+    /* Rounded rect body */
+    rv(bx+2, by, w-4, h, fill);
+    rv(bx, by+2, w, h-4, fill);
+    rv(bx+1, by+1, w-2, h-2, fill);
+
+    rv(bx+2, by-1, w-4, 1, border);
+    rv(bx+2, by+h, w-4, 1, border);
+    rv(bx-1, by+2, 1, h-4, border);
+    rv(bx+w, by+2, 1, h-4, border);
+
+    d(bx+1, by, border); d(bx, by+1, border);
+    d(bx+w-2, by, border); d(bx+w-1, by+1, border);
+    d(bx+1, by+h-1, border); d(bx, by+h-2, border);
+    d(bx+w-2, by+h-1, border); d(bx+w-1, by+h-2, border);
+
+    /* Tail pointing to toad's mouth (only at rest — it detaches once scrolled) */
+    if(f === 1 && A.scroll < 0.5) {
+      let tailStartTx = bx+w-2;
+      let ty = 100;
+      let bottomY = by + h - 1;
+
+      let tx;
+
+      if (bottomY <= ty) {
+        // Bubble is pushed up safely above tail.
+        let pipeTx = bx+w-16;
+        let ch = ty - bottomY;
+
+        // Vertical pipe connecting from the flat bottom edge
+        rv(pipeTx, bottomY, 10, ch, fill);
+        rv(pipeTx-1, bottomY, 1, ch + 4, border); // left border
+        rv(pipeTx+10, bottomY, 1, ch, border);    // right border
+
+        // Horizontal bridge linking pipe to original tail path
+        let bridgeWidth = (tailStartTx + 10) - pipeTx;
+        rv(pipeTx, ty, bridgeWidth, 3, fill);
+        rv(pipeTx, ty+3, bridgeWidth, 1, border); // bottom border
+        rv(pipeTx+11, ty-1, bridgeWidth - 11, 1, border); // top border
+
+        tx = tailStartTx + 8;
+      } else {
+        // Bubble safely overlaps tail.
+        tx = tailStartTx;
+        rv(tx, ty, 10, 3, fill);
+        rv(tx, ty-1, 10, 1, border);
+        rv(tx, ty+3, 10, 1, border);
+        tx += 8;
+      }
+
+      rv(tx, ty, 12, 3, fill);
+      rv(tx, ty-1, 12, 1, border); rv(tx, ty+3, 12, 1, border);
+
+      tx += 10;
+      rv(tx, ty, 8, 2, fill);
+      rv(tx, ty-1, 8, 1, border); rv(tx, ty+2, 8, 1, border);
+
+      tx += 7;
+      rv(tx, ty, 4, 1, fill);
+      rv(tx, ty-1, 4, 1, border); rv(tx, ty+1, 4, 1, border);
+
+      tx += 3;
+      rv(tx, ty, 2, 1, border);
+    }
+  }
+
+  /* ---------- 17. User Bubbles ---------- */
+  function drawUserBubble(){
+    const fill = '#f5edda', border = '#cdbd96';
+
+    // 1. Draw Active Input Bubble
+    if(A.userTh) {
+      const w = 160;
+      const h = A.userTh || 10;
+      const bx = 10;
+      const by = 170 - h;
+
+      // Main Input Bubble Background
+      rv(bx+2, by, w-4, h, fill);
+      rv(bx, by+2, w, h-4, fill);
+      rv(bx+1, by+1, w-2, h-2, fill);
+
+      rv(bx+2, by-1, w-4, 1, border);
+      rv(bx+2, by+h, w-4, 1, border);
+      rv(bx-1, by+2, 1, h-4, border);
+      rv(bx+w, by+2, 1, h-4, border);
+
+      d(bx+1, by, border); d(bx, by+1, border);
+      d(bx+w-2, by, border); d(bx+w-1, by+1, border);
+      d(bx+1, by+h-1, border); d(bx, by+h-2, border);
+      d(bx+w-2, by+h-1, border); d(bx+w-1, by+h-2, border);
+    }
+
+    // 2. Draw Detached Sent Message Bubble
+    if (A.sentText && A.sentTh > 0) {
+      const sw = 160;
+      const sh = A.sentTh|0;
+      const sbx = 10;
+      const sby = (A.sentBoxY + A.scroll)|0;
+
+      rv(sbx+2, sby, sw-4, sh, fill);
+      rv(sbx, sby+2, sw, sh-4, fill);
+      rv(sbx+1, sby+1, sw-2, sh-2, fill);
+
+      rv(sbx+2, sby-1, sw-4, 1, border);
+      rv(sbx+2, sby+sh, sw-4, 1, border);
+      rv(sbx-1, sby+2, 1, sh-4, border);
+      rv(sbx+sw, sby+2, 1, sh-4, border);
+
+      d(sbx+1, sby, border); d(sbx, sby+1, border);
+      d(sbx+sw-2, sby, border); d(sbx+sw-1, sby+1, border);
+      d(sbx+1, sby+sh-1, border); d(sbx, sby+sh-2, border);
+      d(sbx+sw-2, sby+sh-1, border); d(sbx+sw-1, sby+sh-2, border);
+    }
+  }
+
+  /* =================================================================
+     MAIN RENDER
+     ================================================================= */
+  function render(){
+    G.clearRect(0,0,W,H);
+    drawSky();                       // blue sky gradient
+    drawSun(52,26);
+    drawClouds(cloudsA);
+    drawBirds();
+    drawHills();                     // rolling hills on the horizon
+    drawTrees();                     // distant tree silhouettes
+    drawFence();                     // wooden fence along the horizon
+    drawField();                     // green field ground
+    drawGrass(grassB);               // background grass (behind the toad)
+    drawFlowers();
+    if (!MQ.matches) drawToad();     // on mobile the toad is drawn in the corner instead
+    drawGrass(grassF);               // foreground grass swaying in front of the toad
+    drawAmbient();                   // soft sunlight + pollen motes
+    if (MQ.matches) {
+      /* Mobile chat is pure DOM (#mobile-chat). The canvas bubble system
+         (history + input frame + swipe-up sent bubble + toad reply bubble/tail)
+         is desktop-only — drawing it here would bleed stray bubbles onto the
+         scene band, since canvas pixels can't be hidden by the CSS that hides
+         the DOM text overlays. */
+      renderSceneTop();    // sky filling the screen above the field
+      renderToadCorner();
+    } else {
+      drawHistory();
+      drawUserBubble();
+      drawBubble();
+    }
+  }
+
+  /* =================================================================
+     MAIN LOOP
+     ================================================================= */
+  function loop(ts){
+    const s=ts/1000;
+    if(!A.last) A.last=s;
+    const dt=Math.min(s-A.last,0.06);
+    A.last=s;
+    update(dt);
+    render();
+    requestAnimationFrame(loop);
+  }
+
+  /* =================================================================
+     RESIZE
+     ================================================================= */
+  function resize(){
+    // Canvas stretches edge-to-edge via CSS (100vw/100vh). The wrapper
+    // is always fullscreen now — no letterboxing. DOM overlays are
+    // positioned by update() using the wrapper's clientHeight.
+  }
+  window.addEventListener('resize',resize);
+  resize();
+  requestAnimationFrame(loop);
+
+  function escapeHTML(str) {
+    return str.replace(/[&<>'"]/g, 
+      tag => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'}[tag] || tag)
+    );
+  }
+
+  function formatMessage(text) {
+    let safe = escapeHTML(text);
+    // Strip all newlines so the text flows perfectly smoothly as one continuous block
+    safe = safe.replace(/\n+/g, ' ');
+    safe = safe.replace(/\[([^\]]+)\]\((https?:\/\/[^\)]+)\)/g, '<a class="content-link" href="$2" target="_blank">$1</a>');
+    safe = safe.replace(/\*+([^\*]+)\*+/g, '<strong style="color: #9a6f1e;">$1</strong>');
+    return safe;
+  }
+
+  function showText(text) {
+    if(!text) { A.bubbleTarget = 0; return; }
+    const bText = document.getElementById('bubbleText');
+    bText.innerHTML = '<div>' + formatMessage(text) + '</div>';
+
+    bText.style.display = 'flex';
+    bText.style.flexDirection = 'column';
+    bText.style.justifyContent = 'center';
+    bText.style.paddingTop = '';   // measure pure text height (drop any prior overflow padding)
+    bText.style.width = 'fit-content';
+    bText.style.height = 'fit-content';
+    bText.style.maxWidth = ((160 / W) * 100) + '%';
+
+    const wrapperH = document.getElementById('canvasWrapper').clientHeight;
+    const scaleY = wrapperH / H;
+    bText.style.fontSize = (6.5 * scaleY) + 'px';
+
+    const rect = bText.getBoundingClientRect();
+    const canvasW = C.clientWidth;
+    const canvasH = C.clientHeight;
+
+    let calcTw = (rect.width / canvasW) * W;
+    let calcTh = (rect.height / canvasH) * H;
+
+    bText.style.display = 'none';
+
+    A.targetTw = 160; // Always matching user bubble width
+    A.requestedTh = Math.max(12, calcTh + 4);
+    A.bubbleTarget = 1;
+  }
+
+  document.getElementById('userInput').addEventListener('input', (e) => {
+    const el = e.target;
+    const oldHeight = el.style.height;
+    el.style.height = '1px';
+    const canvasH = document.getElementById('canvasWrapper').clientHeight;
+    A.calcUTh = (el.scrollHeight / canvasH) * H;
+    el.style.height = oldHeight;
+  });
+
+  const uInput = document.getElementById('userInput');
+  const sendBtn = document.getElementById('sendBtn');
+
+  /* ---- Mobile chat log (portrait phones) ----
+     Each send rides in as a fresh `.mobile-exchange` at the very top of
+     #mobile-chat; older exchanges slide down. The user message sits on top,
+     the toad's reply is appended beneath it in the same container. On desktop
+     these never run (the callers are guarded by `MQ.matches`),
+     so the canvas swipe-up system is untouched. */
+  const mobileChat = document.getElementById('mobile-chat');
+  let mobileThink = null;       // the "..." toad bubble awaiting a real reply
+  let mobileExchange = null;    // container for the in-progress exchange
+
+  function mobileAppend(text, role) {
+    const msg = document.createElement('div');
+    msg.className = 'mobile-msg ' + role;
+    msg.textContent = text;
+    if (role === 'user') {
+      mobileExchange = document.createElement('div');
+      mobileExchange.className = 'mobile-exchange';
+      mobileExchange.appendChild(msg);
+      mobileChat.insertBefore(mobileExchange, mobileChat.firstChild);
+      mobileChat.scrollTop = 0;   // keep the newest exchange in view
+    } else {
+      (mobileExchange || mobileChat).appendChild(msg);
+    }
+    return msg;
+  }
+
+  function dispatchMessage() {
+    if (A.chatState === 'SWIPING_UP') return;
+
+    const text = uInput.value.trim();
+    if (!text) return;
+
+    A.scroll = 0; A.scrollTarget = 0;   // a new exchange snaps back to the live view
+
+    // Snapshot old toad bubble properties for swiping
+    A.oldTw = A.targetTw * A.bubbleFrame;
+    A.oldTh = A.targetTh * A.bubbleFrame;
+    A.oldBy = (A.anchorY || 100) - (A.oldTh * 0.64);
+    A.oldBx = 170 - A.oldTw;
+
+    // Set up detached sent message
+    const sentMsgDom = document.getElementById('sentMessage');
+    sentMsgDom.innerText = text;
+
+    const canvasH = document.getElementById('canvasWrapper').clientHeight;
+    const scaleY = canvasH / H;
+
+    // Measure at the SAME font size and column layout the bubble is rendered
+    // at — otherwise multi-line text is measured at the default font and the
+    // box ends up too short, clipping all but the first line(s).
+    sentMsgDom.style.display = 'flex';
+    sentMsgDom.style.flexDirection = 'column';
+    sentMsgDom.style.justifyContent = 'center';
+    sentMsgDom.style.width = ((160 / W) * 100) + '%';
+    sentMsgDom.style.height = 'fit-content';
+    sentMsgDom.style.fontSize = (6.5 * scaleY) + 'px';
+
+    // Measure layout synchronously
+    const sRect = sentMsgDom.getBoundingClientRect();
+    A.sentRequestedTh = Math.max(10, Math.min(45, (sRect.height / canvasH) * H + 4));
+    A.sentTh = A.sentRequestedTh;
+
+    A.sentText = text;
+    A.sentBoxY = 170 - A.userTh;
+    A.chatState = 'SWIPING_UP';
+
+    uInput.value = '';
+    uInput.dispatchEvent(new Event('input'));
+
+    if (!window.chatHistory) window.chatHistory = [];
+    window.chatHistory.push({ role: "user", parts: [{ text: text }] });
+    recordMessage('user', text);
+
+    // Mobile: push exchange directly into the mobile chat log
+    if (MQ.matches) {
+      mobileAppend(text, 'user');
+      mobileThink = mobileAppend('...', 'toad');
+    }
+
+    setTimeout(() => {
+      A.bubbleFrame = 0;
+      A.bubbleTarget = 0;
+      A.chatState = 'IDLE';
+
+      showText("..."); // Thinking state
+
+      /* Deploy-safe: the API key lives server-side in /api/chat (env var),
+         never in the browser. We only send the conversation; the proxy picks
+         the model (Gemini 3 Flash) and adds the system prompt, search tool
+         and safety settings. */
+      fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contents: window.chatHistory })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.error) {
+          showText(`Error: ${data.error}`);
+          recordMessage('model', `Error: ${data.error}`);
+          if (MQ.matches && mobileThink) {
+            mobileThink.textContent = 'Error: ' + data.error;
+            mobileThink = null;
+          }
+          return;
+        }
+        const replyText = data.reply || "Silence...";
+        window.chatHistory.push({ role: "model", parts: [{ text: replyText }] });
+        showText(replyText);
+        recordMessage('model', replyText);
+        // mobile: swap "..." with actual reply
+        if (MQ.matches && mobileThink) {
+          mobileThink.innerHTML = '<div>' + formatMessage(replyText) + '</div>';
+          mobileThink = null;
+        }
+      })
+      .catch(err => {
+        const m = `The connection to the cosmos was interrupted: ${err.message}`;
+        showText(m);
+        recordMessage('model', m);
+        if (MQ.matches && mobileThink) {
+          mobileThink.textContent = m;
+          mobileThink = null;
+        }
+      });
+
+    }, 700);
+  }
+
+  sendBtn.addEventListener('click', dispatchMessage);
+  uInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      dispatchMessage();
+    }
+  });
+
+  /* =================================================================
+     PREVIOUS EXCHANGES  (additive — same boxes, scrolled back into view)
+     The live swipe-up chat above is untouched; its boxes are merely shifted
+     by A.scroll (which is 0 in normal use). Every turn is recorded into
+     `transcript` with a hidden DOM text box in the SAME format as the live
+     ones (#histLayer; the pixel bubble behind each is drawn on the canvas
+     by drawHistory). Scrolling UP — anywhere except over the input or the
+     toad's reply — eases A.scroll up: the on-screen boxes slide down and the
+     earlier exchanges (the ones that swiped up off the top when you sent)
+     slide back into view above. Scrolling back down eases A.scroll to 0.
+     ================================================================= */
+  const transcript = [];                 // { role, text, el, h, _y }   h/_y in grid units
+  const histLayer = document.getElementById('histLayer');
+  const HGAP = 6;                         // grid units between stacked boxes
+
+  function recordMessage(role, text){
+    if (!text || text === '...') return;
+    role = (role === 'user') ? 'user' : 'toad';
+    const el = document.createElement('div');
+    el.className = 'histMsg';
+    if (role === 'user') el.textContent = text;
+    else el.innerHTML = '<div>' + formatMessage(text) + '</div>';
+    el.style.left   = ((10 / W) * 100) + '%';
+    el.style.width  = ((160 / W) * 100) + '%';
+    el.style.height = 'auto';
+    el.style.display = 'flex';
+    el.style.fontSize = (6.5 * (A.scaleY || 1)) + 'px';
+    histLayer.appendChild(el);
+    const wrapperH = document.getElementById('canvasWrapper').clientHeight || H;
+    const h = (el.getBoundingClientRect().height / wrapperH) * H + 4;   // +4: same breathing room as the live bubbles
+    el.style.display = 'none';
+    transcript.push({ role, text, el, h, _y: 0 });
+  }
+
+  /* index of the latest user message — everything before it is "history" */
+  function historyCount(){
+    for (let i = transcript.length - 1; i >= 0; i--)
+      if (transcript[i].role === 'user') return i;   // messages [0 .. i-1]
+    return 0;
+  }
+
+  /* stack the history boxes upward, just above the live sent message */
+  function layoutHistory(){
+    const n = historyCount();
+    let yb = (A.sentText ? A.sentBoxY : 170) - HGAP;   // bottom of the most-recent history box
+    for (let i = n - 1; i >= 0; i--){
+      transcript[i]._y = yb - transcript[i].h;
+      yb = transcript[i]._y - HGAP;
+    }
+    A.maxScroll = n > 0 ? Math.max(0, 6 - transcript[0]._y) : 0;
+    return n;
+  }
+
+  /* place + show the history DOM text every frame (canvas bg drawn in render) */
+  function syncHistory(){
+    const n = layoutHistory();
+    const showing = A.scroll > 0.5;
+    for (let i = 0; i < transcript.length; i++){
+      const m = transcript[i];
+      if (showing && i < n){
+        m.el.style.display  = 'flex';
+        m.el.style.top      = (((m._y + A.scroll) / H) * 100) + '%';
+        m.el.style.height   = ((m.h / H) * 100) + '%';
+        m.el.style.fontSize = (6.5 * A.scaleY) + 'px';
+      } else {
+        m.el.style.display = 'none';
+      }
+    }
+  }
+
+  /* pixel bubble background for a history box — identical to the live boxes */
+  function drawHistBox(bx, by, w, h, fill, border){
+    rv(bx+2, by, w-4, h, fill);
+    rv(bx, by+2, w, h-4, fill);
+    rv(bx+1, by+1, w-2, h-2, fill);
+    rv(bx+2, by-1, w-4, 1, border);
+    rv(bx+2, by+h, w-4, 1, border);
+    rv(bx-1, by+2, 1, h-4, border);
+    rv(bx+w, by+2, 1, h-4, border);
+    d(bx+1, by, border); d(bx, by+1, border);
+    d(bx+w-2, by, border); d(bx+w-1, by+1, border);
+    d(bx+1, by+h-1, border); d(bx, by+h-2, border);
+    d(bx+w-2, by+h-1, border); d(bx+w-1, by+h-2, border);
+  }
+
+  function drawHistory(){
+    if (A.scroll <= 0.5) return;
+    const n = historyCount();
+    for (let i = 0; i < n; i++){
+      const m = transcript[i];
+      const fill   = m.role === 'user' ? '#f5edda' : '#fdf8ec';
+      const border = m.role === 'user' ? '#cdbd96' : '#d6c8a6';
+      drawHistBox(10, Math.round(m._y + A.scroll), 160, Math.round(m.h), fill, border);
+    }
+  }
+
+  /* the two "text hitboxes" that keep their own scroll: the input + the toad's reply */
+  const isTextHitbox = (t) => !!(t && t.closest && t.closest('#userInput, #bubbleText'));
+
+  window.addEventListener('wheel', (e) => {
+    if (isTextHitbox(e.target)) return;
+    if (A.maxScroll <= 0 && A.scrollTarget <= 0) return;
+    const before = A.scrollTarget;
+    A.scrollTarget = Math.max(0, Math.min(A.maxScroll, A.scrollTarget - e.deltaY / (A.scaleY || 1)));
+    if (A.scrollTarget !== before) e.preventDefault();
+  }, { passive: false });
+
+  window.addEventListener('keydown', (e) => { if (e.key === 'Escape') A.scrollTarget = 0; });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,16 @@
+# Secrets — never commit
+.env
+.env.local
+.env*.local
+
+# Vercel / build artifacts
+.vercel
+node_modules
+.netlify
+.wrangler
+
+# macOS
+.DS_Store
+
+# Playwright
+.playwright-mcp
