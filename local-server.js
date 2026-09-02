@@ -6,6 +6,28 @@ const fs = require('fs');
 const path = require('path');
 const { networkInterfaces } = require('os');
 
+/* Auto-load GEMINI_API_KEY from .env.local or .env if not set */
+if (!process.env.GEMINI_API_KEY) {
+  for (const envFile of ['.env.local', '.env']) {
+    const envPath = path.resolve(__dirname, envFile);
+    if (fs.existsSync(envPath)) {
+      const content = fs.readFileSync(envPath, 'utf8');
+      for (const line of content.split('\n')) {
+        const trimmed = line.trim();
+        if (trimmed && !trimmed.startsWith('#')) {
+          const eq = trimmed.indexOf('=');
+          if (eq > 0) {
+            const key = trimmed.slice(0, eq).trim();
+            const val = trimmed.slice(eq + 1).trim();
+            if (!process.env[key]) process.env[key] = val;
+          }
+        }
+      }
+      break;
+    }
+  }
+}
+
 /* Reuse the serverless proxy as a plain Node module */
 const chatHandler = require('./api/chat.js');
 

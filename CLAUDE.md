@@ -102,12 +102,27 @@ canvas shapes and DOM text must be kept in lockstep or they visibly drift apart.
 (`getBoundingClientRect`) before animating the bubble open (`A.bubbleTarget = 1`, `A.bubbleFrame`
 eases 0→1).
 
-`A.chatState` is a small machine: `IDLE` ↔ `SWIPING_UP`. On send (`dispatchMessage`), the toad's
-current bubble is snapshotted into `A.old*`, the user message detaches and "swipes up" to the top
-while the toad bubble fades, then a reply appears. Bubble layout in `update()` enforces physics
-rules — the sent message **never** gets squashed; instead the toad bubble is height-limited or the
-toad is pushed down to avoid overlap — and the articulated tail is wired to the toad's mouth at a
-fixed `y = 100`. Touch these constants carefully.
+`A.chatState` is a small machine: `IDLE` ↔ `SWIPING_UP`. On send (`dispatchMessage`), the entire previous
+exchange is snapshotted into `A.old*` (`A.oldTw/oldTh/oldBy/oldBx` and `A.oldUserText/oldUserTh/oldUserBy`),
+and the scene executes a **frame-driven synchronized dual-scroll animation** (`A.swipeProgress`, 0.76s–0.85s):
+1. **Previous Exchange Ascend & Dissolve**: The previous user message (`#oldSentMessage`) scrolls from `y = 15`
+   up into negative space (`y = -35`) with smooth opacity fading; the previous toad bubble (`#bubbleText`)
+   cleanly detaches its speech tail from the toad's mouth (`chatState !== 'SWIPING_UP'`), ascends into the night
+   sky, and dissolves into starlight.
+2. **New Message Gliding Entrance**: The new user message (`#sentMessage`) detaches from the input dock
+   (`y = 168 - th`) and glides upward across the meadow into `y = 15` following a balanced cubic ease-in-out
+   curve with a gentle tactile cushion. Its border illuminates in luminous starlight cyan (`#829fd8`), cooling to
+   celestial indigo (`#5c74b2`), and settles into midnight indigo (`#3a4c86`).
+3. **Synchronized Handoff**: Driven purely by `update(dt)` every frame (no race-prone `setTimeout`). When
+   `A.swipeProgress >= 1.0`, the old exchange clears and the toad immediately ignites its third-eye brow star
+   to begin the thought entrance bloom.
+4. **Mobile Parity**: `.mobile-msg.user` enters with an 8-bit stepped bloom (`@keyframes mobileUserEnter`,
+   `steps(8, end)`) with glowing cyan borders, while `#mobile-chat` smoothly scrolls to keep the active exchange
+   in view (`scrollTo({ top: scrollHeight, behavior: 'smooth' })`).
+
+Bubble layout in `update()` enforces physics rules — the sent message **never** gets squashed; instead the toad
+bubble is height-limited or the toad is pushed down to avoid overlap — and the articulated tail is wired to the
+toad's mouth at a fixed `y = 100`. Touch these constants carefully.
 
 **Only the latest exchange is ever shown live** — each send clears the previous one. A separate,
 purely additive **scroll-back system** reuses the same box format for reading past exchanges (see
@@ -179,34 +194,53 @@ fullscreen**.
   conversations are pinned to the bottom (near the input) by `.mobile-exchange:first-child { margin-top:
   auto }`, which collapses to 0 once content overflows so scroll-up history still works. `mobileAppend`
   calls `mobileScrollBottom()` (sets `scrollTop = scrollHeight`) so each send jumps to the newest
-  message (user's question + the `'...'` thinking bubble). When the reply/error swaps in, the log scrolls
-  to the **top** of the toad's new message instead — `mobileScrollToTop(el)` aligns the reply's top edge
-  ~12px below the log top so the reader starts at the beginning, not scrolled to the end of a long reply
-  (the browser clamps for short/last replies that can't reach the top). This re-scroll only fires if
-  `mobilePinnedBottom()` was true before the swap (a user who scrolled up to read history isn't yanked
-  away). The `'...'` bubble is held in `mobileThink` and its `innerHTML` is rewritten in place when the
-  reply/error arrives.
+  message. During thinking, no premature `"..."` bubble is shown; instead `#toadCorner` (84×98) shows
+  the toad's brow star and meditative levitation, while `#mobileThought` renders the cosmic thought cloud
+  floating high in the open starry sky (top: 24%), well clear of the user's message at the bottom.
+  When the reply/error arrives after thought crystallization, `mobileAppend` is called with a stepped
+  entrance animation (`mobileToadEnter`), and the log scrolls to the **top** of the toad's new message
+  (`mobileScrollToTop(el)`) ~12px below the log top. This re-scroll only fires if `mobilePinnedBottom()`
+  was true before the arrival.
 
-Reverting to desktop-only: remove the mobile CSS block + `#toadCorner`/`#mobile-chat` markup, restore
-`const G`, drop `MQ`/`GT`/`renderToadCorner` and the `MQ.matches` branches in `render()`/
-`dispatchMessage`, and the `mobileAppend`/`mobileScrollBottom`/`mobilePinnedBottom`/`mobileThink`/
-`mobileExchange` definitions.
+Reverting to desktop-only: remove the mobile CSS block + `#toadCorner`/`#mobileThought`/`#mobile-chat` markup,
+restore `const G`, drop `MQ`/`GT`/`GMT`/`renderToadCorner`/`renderMobileThought` and the `MQ.matches` branches in `render()`/
+`dispatchMessage`, and the `mobileAppend`/`mobileScrollBottom`/`mobilePinnedBottom`/`mobileExchange` definitions.
 
-## Backend (deploy-safe Gemini proxy)
+## Backend (deploy-safe Gemini proxy) & Thought-to-Speech Transition
 
 On send, `dispatchMessage` runs the swipe-up animation, clears the input, and after a 700ms
-`setTimeout` resets `A.chatState` to `IDLE` and closes the old toad bubble. That `setTimeout` body
-is where the reply is fetched: it shows a `"..."` thinking bubble, then `POST`s
-`{ contents: window.chatHistory }` to **`/api/chat`** and passes the returned `reply` to
-`showText(reply)`. `showText(text)` is the sole entry point for displaying a reply (it measures the
-text, then eases the bubble open).
+`setTimeout` resets `A.chatState` to `IDLE`, closes the old toad bubble, and enters `A.thinking = true`.
+Rather than popping onto the screen abruptly, the thinking state unfolds via a choreographed **0.85s Thought Entrance Animation (`A.thinkIntro`)**:
+1. **Third-Eye Ignition (0.00s .. 0.15s)**: A golden starlight spark ignites on the toad's brow between its closed eyes.
+2. **Sequential Rising Connector Orbs (0.15s .. 0.45s)**: Connector Orbs 1 -> 2 -> 3 sprout sequentially upward from the temple into the sky with 1px/3px glints before expanding to full scale.
+3. **Cosmic Cloud Stepped Bloom (0.45s .. 0.85s)**: At Orb 3's tip, the cloud sparks with a birth-flash and unfurls through an 8-bit stepped expansion curve (18% -> 42% -> 70% -> 90% -> 103.5% overshoot -> 100%) with active celestial cyan/indigo border highlights (`#5c74b2`, `#a0d8ef`) before settling into deep midnight blue.
+4. On mobile, the corner toad's third eye ignites first, followed by the cloud unfurling with the same stepped bloom in the night sky.
+
+While settled in thought, no speech bubble is rendered. On desktop, `drawThought()` renders the thought cloud lowered
+on the screen (y >= 66 in the open meadow space at toad shoulder level), completely below the user's sent message
+at the top (y: 15..60), cycling through 8-bit contemplation runes at 6 fps. On mobile, `renderMobileThought()`
+renders the thought cloud raised high in the starry sky, far above the user message at the bottom.
+
+When `/api/chat` returns, rather than an abrupt popup, the system orchestrates an organic, 1.4-second
+multi-stage transition (`A.transPhase`):
+1. **CONDENSING (0.0s .. 0.38s)**: The thought cloud condenses inward from 100% to 20% scale with an epiphany cross-spark, gathering cosmic runes into a concentrated golden wisdom pearl at its core.
+2. **STREAMING & AWAKENING (0.38s .. 0.70s)**: The wisdom pearl streams down the connector orbs (Orbs 3 -> 2 -> 1 flash in sequence), the toad's third-eye brow blazes, a breath of inspiration puffs from its mouth, and the toad opens its serene eyes with golden starlight irises (`A.toadAwake`).
+3. **BLOOMING (0.70s .. 1.22s)**: The tail connects directly from the toad's mouth to the sprout point, and the speech bubble unfurls with an 8-step retro pixel curve, active celestial blue starlight borders (`#829fd8` -> `#5c74b2`), and soft text fade-in. On mobile, the corner toad awakens and the reply blooms into `#mobile-chat` with an 8-step stepped bounce (`mobileToadEnter`).
+4. **SETTLING (1.22s .. 1.42s)**: Borders relax into midnight indigo (`#33437a`), and the toad remains calmly present with its enlightened gaze while imparting wisdom.
 
 **The key never touches the browser.** `api/chat.js` is a Node serverless function that holds the
 Gemini API key in the `GEMINI_API_KEY` env var, hardcodes the model (`gemini-3-flash-preview`), adds
 the system prompt + Google Search grounding tool + `BLOCK_NONE` safety settings server-side, and
 returns `{ reply }` (or `{ error }`). The system prompt — the Toad's wise-philosopher persona —
-lives **only** in `api/chat.js`; editing the Toad's voice (or the model) means editing that file,
+lives in `api/chat.js` and `netlify/functions/chat.js`; editing the Toad's voice (or the model) means editing those files,
 not `index.html`.
+
+**Dynamic Proportionality & Reciprocity**: The Toad's response length is calibrated to the substance and intent
+of the seeker's message:
+- Casual greetings, short banter, or single-word inputs (`"yo"`, `"hello"`, `"cool"`) receive brief, grounded 1-2 sentence replies with quiet warmth. No unsolicited multi-paragraph lectures or external links.
+- Concise queries (`"who are you?"`, `"what is this place?"`) receive succinct, evocative 2-4 sentence responses.
+- Deep philosophical questions or personal dilemmas receive multi-paragraph, nuanced explorations synthesizing Eastern insight and Western philosophy.
+- External recommendations (books, lectures, podcasts) are strictly conditional: never given for greetings, and only offered when explicitly requested or uniquely illuminating.
 
 `window.chatHistory` (built in `dispatchMessage`) is the running `contents` array of
 `{ role, parts }` turns sent on each request, so the Toad has conversational memory within a

@@ -1,0 +1,10 @@
+{
+  "name": "wise-toad",
+  "version": "1.0.0",
+  "description": "Wise Toad — an animated pixel-art scene with an AI philosopher companion",
+  "main": "local-server.js",
+  "scripts": {
+    "start": "node local-server.js",
+    "dev": "node local-server.js"
+  }
+}

@@ -11,7 +11,7 @@
     html,body{width:100%;height:100%;overflow:hidden;background:#101234}
     #canvasWrapper { position:fixed; inset:0; width:100vw; height:100vh; overflow:hidden; z-index:0; }
     canvas#scene{image-rendering:pixelated;image-rendering:crisp-edges;-ms-interpolation-mode:nearest-neighbor;display:block; width:100%; height:100%;}
-    #bubbleText, #sentMessage {
+    #bubbleText, #sentMessage, #oldSentMessage {
       position: absolute;
       z-index: 2;
       display: none;
@@ -29,10 +29,10 @@
       white-space: pre-wrap;
       word-wrap: break-word;
     }
-    #sentMessage {
+    #sentMessage, #oldSentMessage {
       padding: 0 2%;
     }
-    #bubbleText::-webkit-scrollbar, #sentMessage::-webkit-scrollbar {
+    #bubbleText::-webkit-scrollbar, #sentMessage::-webkit-scrollbar, #oldSentMessage::-webkit-scrollbar {
       display: none;
     }
     #userInput {
@@ -127,7 +127,7 @@
     #mobile-chat,
     #toadCorner,
     #sceneTop,
-    #inputBubbleBg {
+    #inputBubbleBg, #toadCorner, #mobileThought {
       display: none;
     }
 
@@ -180,10 +180,23 @@
         display: block;
         position: fixed;
         right: 4px;
-bottom: calc(4px + env(safe-area-inset-bottom));
+        bottom: calc(4px + env(safe-area-inset-bottom));
         width: 84px;
         height: 98px;
         z-index: 3;
+        image-rendering: pixelated;
+        pointer-events: none;
+      }
+
+      /* Mobile thought cloud: floating high in the starry sky, well clear of chat */
+      #mobileThought {
+        display: block;
+        position: fixed;
+        top: 24%;
+        right: 20px;
+        width: 140px;
+        height: 72px;
+        z-index: 1;
         image-rendering: pixelated;
         pointer-events: none;
       }
@@ -209,15 +222,15 @@ bottom: calc(4px + env(safe-area-inset-bottom));
         flex-direction: column;
         gap: 16px;
         margin-bottom: 14px;
-        animation: mobileSlideIn 0.3s ease-out;
+        animation: mobileExchangeEnter 0.45s ease-out;
       }
       /* Pins the whole stack to the bottom of the scroll area when the
          conversation is short (newest near the input), yet collapses to 0 so
          scrolling still works once messages overflow upward. */
       .mobile-exchange:first-child { margin-top: auto; }
 
-      @keyframes mobileSlideIn {
-        from { opacity: 0; transform: translateY(16px); }
+      @keyframes mobileExchangeEnter {
+        from { opacity: 0.3; transform: translateY(16px); }
         to   { opacity: 1; transform: translateY(0); }
       }
 
@@ -236,8 +249,32 @@ bottom: calc(4px + env(safe-area-inset-bottom));
 
       .mobile-msg.user {
         align-self: flex-start;
+        max-width: calc(100% - 94px);
         background: #1c2950;
         border: 2px solid #3a4c86;
+        animation: mobileUserEnter 0.48s steps(8, end) forwards;
+      }
+      @keyframes mobileUserEnter {
+        0% {
+          opacity: 0;
+          transform: translateY(18px) scale(0.95);
+          border-color: #829fd8;
+        }
+        35% {
+          opacity: 0.75;
+          transform: translateY(8px) scale(0.98);
+          border-color: #6b85c8;
+        }
+        75% {
+          opacity: 1;
+          transform: translateY(-2px) scale(1.015);
+          border-color: #5c74b2;
+        }
+        100% {
+          opacity: 1;
+          transform: translateY(0) scale(1);
+          border-color: #3a4c86;
+        }
       }
       .mobile-msg.user::after {
         content: '';
@@ -266,6 +303,14 @@ bottom: calc(4px + env(safe-area-inset-bottom));
         align-self: flex-end;
         background: #16224a;
         border: 2px solid #33437a;
+        animation: mobileToadEnter 0.52s steps(8, end) forwards;
+      }
+      @keyframes mobileToadEnter {
+        0%   { opacity: 0; transform: translateY(18px) scale(0.65); border-color: #829fd8; }
+        25%  { opacity: 0.45; transform: translateY(10px) scaleX(0.85) scaleY(0.75); border-color: #829fd8; }
+        50%  { opacity: 0.75; transform: translateY(4px) scaleX(0.96) scaleY(0.92); border-color: #5c74b2; }
+        75%  { opacity: 0.95; transform: translateY(-2px) scaleX(1.02) scaleY(1.02); border-color: #445995; }
+        100% { opacity: 1; transform: translateY(0) scale(1.0); border-color: #33437a; }
       }
       .mobile-msg.toad::after {
         content: '';
@@ -345,7 +390,7 @@ bottom: calc(4px + env(safe-area-inset-bottom));
       }
 
       /* hide the desktop overlays */
-      #bubbleText, #sentMessage, #histLayer {
+      #bubbleText, #sentMessage, #oldSentMessage, #histLayer {
         display: none !important;
       }
     }
@@ -357,12 +402,14 @@ bottom: calc(4px + env(safe-area-inset-bottom));
   <canvas id="sceneTop" width="320" height="180"></canvas>
   <div id="bubbleText"></div>
   <div id="sentMessage"></div>
+  <div id="oldSentMessage"></div>
   <canvas id="inputBubbleBg" width="64" height="10"></canvas>
   <textarea id="userInput" placeholder="Speak to the Toad"></textarea>
   <div id="sendBtn" title="Send">&gt;</div>
   <div id="histLayer"></div>
 </div>
 <div id="mobile-chat"></div>
+<canvas id="mobileThought" width="70" height="36"></canvas>
 <canvas id="toadCorner" width="84" height="98"></canvas>
 <script>
 (() => {
@@ -383,14 +430,62 @@ bottom: calc(4px + env(safe-area-inset-bottom));
   const TC = document.getElementById('toadCorner');
   const GT = TC.getContext('2d');
   GT.imageSmoothingEnabled = false;
-  /* translate so the toad's bounding box (grid ~178,69 → 84×98) lands at the origin */
-  const TOAD_OX = 218, TOAD_OY = 69;   // = S.toad.x - 7: keeps the corner toad framed despite the desktop x shift
+  /* translate so the toad's bounding box lands comfortably in the corner canvas */
+  const TOAD_OX = 218, TOAD_OY = 69;   // centered & grounded on bottom grass
   function renderToadCorner(){
     GT.setTransform(1,0,0,1,0,0);
     GT.clearRect(0,0,TC.width,TC.height);
     GT.setTransform(1,0,0,1,-TOAD_OX,-TOAD_OY);
     const prev = G; G = GT;   // primitives (rv/d/…) draw to whatever G points at
     drawToad();
+    G = prev;
+  }
+
+  /* Mobile: floating thought cloud canvas positioned high in the starry sky */
+  const MTC = document.getElementById('mobileThought');
+  const GMT = MTC.getContext('2d');
+  GMT.imageSmoothingEnabled = false;
+  function renderMobileThought(){
+    GMT.clearRect(0, 0, MTC.width, MTC.height);
+    if (!A.thinking && A.transPhase === 'IDLE') return;
+    if (A.transPhase === 'BLOOMING' || A.transPhase === 'SETTLING') return;
+
+    let scale = 1.0;
+    let coreFlash = 0;
+    let isIntro = false;
+
+    if (A.thinking && A.thinkIntro < 1.0) {
+      isIntro = true;
+      // Cloud blooms in the sky after third-eye activates on corner toad
+      const cloudIntroP = (A.thinkIntro - 0.20) / 0.75;
+      if (cloudIntroP <= 0) return; // wait for third eye to flare first
+      const p = Math.min(1.0, cloudIntroP);
+      if (p < 0.15) {
+        scale = 0.18; coreFlash = 0.9;
+      } else if (p < 0.35) {
+        scale = 0.42; coreFlash = 0.5;
+      } else if (p < 0.55) {
+        scale = 0.70; coreFlash = 0.2;
+      } else if (p < 0.75) {
+        scale = 0.90; coreFlash = 0.05;
+      } else if (p < 0.90) {
+        scale = 1.035; coreFlash = 0;
+      } else {
+        scale = 1.00; coreFlash = 0;
+      }
+    } else if (A.transPhase === 'CONDENSING') {
+      const cp = Math.min(1, A.transTimer / 0.38);
+      scale = Math.max(0.20, 1.0 - 0.80 * cp);
+      coreFlash = Math.sin(cp * Math.PI);
+    } else if (A.transPhase === 'STREAMING') {
+      const sp = Math.min(1, A.transTimer / 0.32);
+      scale = Math.max(0, 0.20 * (1 - sp));
+      coreFlash = 0.5 * (1 - sp);
+    }
+
+    const prev = G; G = GMT;
+    const floatY = (A.transPhase === 'IDLE') ? ((Math.sin(A.thinkTime * 1.5) * 1.2)|0) : 0;
+    drawThoughtCloud(2, 3 + floatY, A.thinkTime, scale, coreFlash, isIntro);
     G = prev;
   }
 
@@ -564,10 +659,19 @@ bottom: calc(4px + env(safe-area-inset-bottom));
     t:0, dt:0, last:0,
     sway: 0,
     breath: 0,
-    bubbleTarget: 0, bubbleFrame: 0, bubbleTimer: 0,
+    bubbleTarget: 0, bubbleFrame: 0, bubbleTimer: 0, bubbleProgress: 0,
+    thinking: false, thinkTime: 0, thinkIntro: 0,
+    swipeProgress: 0, swipeDuration: 0.76,
+    oldUserText: null, oldUserTh: 0, oldUserBy: 0, oldUserByStart: 0, oldByStart: 0,
+    transPhase: 'IDLE',   // 'IDLE' | 'CONDENSING' | 'STREAMING' | 'BLOOMING' | 'SETTLING'
+    transTimer: 0,
+    pendingReply: null,
+    toadAwake: 0,        // 0 (closed) -> 1 (enlightened eyes open)
+    mouthSpark: 0,       // 0 or 1 inspiration puff at mouth
     targetTw: 140, targetTh: 110, requestedTh: 110, calcUTh: 12,
     scaleY: 1, scroll: 0, scrollTarget: 0, maxScroll: 0
   };
+  window.A = A;
 
   /* =================================================================
      HELPERS
@@ -747,7 +851,9 @@ bottom: calc(4px + env(safe-area-inset-bottom));
 
   /* ---------- 15. TOAD (the star of the show) ---------- */
   function drawToad(){
-    const tx=S.toad.x, ty=S.toad.y;
+    // Subtle meditative levitation when deeply contemplating (1px float)
+    const hoverY = (A.thinking && Math.sin(A.thinkTime * 1.6) > 0.35) ? 1 : 0;
+    const tx=S.toad.x, ty=S.toad.y - hoverY;
     const bo=(Math.sin(A.breath)*1)|0;
 
     /* --- Crossed legs (lotus) --- */
@@ -851,6 +957,14 @@ bottom: calc(4px + env(safe-area-inset-bottom));
     rv(tx+17,ty+16,10,1,P.tLid);
     rv(tx+43,ty+16,10,1,P.tLid);
 
+    /* enlightened eye awakening with golden starlight irises */
+    if (A.toadAwake > 0.05) {
+      rv(tx+17, ty+13, 9, 2, '#0c1612');
+      rv(tx+44, ty+13, 9, 2, '#0c1612');
+      d(tx+20, ty+14, '#e6c468'); d(tx+21, ty+14, '#ffffff');
+      d(tx+47, ty+14, '#e6c468'); d(tx+48, ty+14, '#ffffff');
+    }
+
     /* nostrils */
     rv(tx+28,ty+20,3,3,P.tD);
     rv(tx+39,ty+20,3,3,P.tD);
@@ -861,6 +975,48 @@ bottom: calc(4px + env(safe-area-inset-bottom));
     rv(tx+25,ty+25,20,2,P.tD);
     rv(tx+24,ty+25,2,1,P.tD);rv(tx+44,ty+25,2,1,P.tD);
     d(tx+23,ty+24,P.tM);d(tx+46,ty+24,P.tM);
+    if (A.mouthSpark > 0) {
+      // Inspiration breath puff at mouth as words form
+      rv(tx+22, ty+24, 4, 2, '#ffffff');
+      d(tx+20, ty+23, '#a0d8ef'); d(tx+26, ty+25, '#e6c468');
+    }
+
+    /* forehead third-eye spark (awakes when pondering, blazes during revelation) */
+    if (A.thinking || A.transPhase !== 'IDLE') {
+      const fcx = tx + 35, fcy = ty + 8;
+      const step4 = ((A.thinkTime * 5)|0) % 4;
+      const isBlazing = (A.transPhase === 'CONDENSING' || A.transPhase === 'STREAMING');
+      const isIgniting = (A.thinking && A.thinkIntro < 0.25);
+      if (isBlazing) {
+        // Brilliant flash of insight!
+        d(fcx, fcy, '#ffffff');
+        d(fcx-1, fcy, '#e6c468'); d(fcx+1, fcy, '#e6c468');
+        d(fcx, fcy-1, '#e6c468'); d(fcx, fcy+1, '#e6c468');
+        d(fcx-2, fcy, 'rgba(160,216,239,0.8)'); d(fcx+2, fcy, 'rgba(160,216,239,0.8)');
+        d(fcx, fcy-2, 'rgba(160,216,239,0.8)'); d(fcx, fcy+2, 'rgba(160,216,239,0.8)');
+      } else if (isIgniting) {
+        // Initial ignition spark on forehead as contemplation begins
+        d(fcx, fcy, '#ffffff');
+        if (A.thinkIntro > 0.08) {
+          d(fcx-1, fcy, '#e6c468'); d(fcx+1, fcy, '#e6c468');
+          d(fcx, fcy-1, '#e6c468'); d(fcx, fcy+1, '#e6c468');
+        }
+      } else if (step4 === 0) {
+        d(fcx, fcy, '#e6c468');
+      } else if (step4 === 1) {
+        d(fcx, fcy, '#ffffff');
+        d(fcx-1, fcy, '#78a0d0'); d(fcx+1, fcy, '#78a0d0');
+        d(fcx, fcy-1, '#78a0d0'); d(fcx, fcy+1, '#78a0d0');
+      } else if (step4 === 2) {
+        d(fcx, fcy, '#e6c468');
+        d(fcx-1, fcy, '#ffffff'); d(fcx+1, fcy, '#ffffff');
+        d(fcx-2, fcy, 'rgba(160,216,239,0.6)'); d(fcx+2, fcy, 'rgba(160,216,239,0.6)');
+        d(fcx, fcy-1, '#a0d8ef'); d(fcx, fcy+1, '#a0d8ef');
+      } else {
+        d(fcx, fcy, '#a0d8ef');
+        d(fcx-1, fcy, 'rgba(120,160,220,0.4)'); d(fcx+1, fcy, 'rgba(120,160,220,0.4)');
+      }
+    }
 
     /* ambient highlight */
     rv(tx+22,ty+1,26,2,'rgba(80,120,200,0.18)');
@@ -868,9 +1024,361 @@ bottom: calc(4px + env(safe-area-inset-bottom));
     rv(tx+49,ty+4,8,2,'rgba(80,120,200,0.10)');
     rv(tx+13,ty+15,17,8,'rgba(30,100,220,0.06)');
 
-    /* ground shadow */
-    rv(tx-3,ty+88,76,3,'rgba(0,0,0,0.30)');
-    rv(tx+4,ty+90,62,2,'rgba(0,0,0,0.15)');
+    /* ground shadow (ground stays locked to field y) */
+    const groundTy = S.toad.y;
+    rv(tx-3,groundTy+88,76,3, hoverY ? 'rgba(0,0,0,0.18)' : 'rgba(0,0,0,0.30)');
+    rv(tx+4,groundTy+90,62,2, hoverY ? 'rgba(0,0,0,0.08)' : 'rgba(0,0,0,0.15)');
+  }
+
+  /* ---------- 15b. TOAD THOUGHT ANIMATION (deep cosmic contemplation) ---------- */
+  function drawThoughtCloud(cx, cy, t, scale = 1.0, coreFlash = 0, isIntro = false){
+    // Discrete stepped clock for authentic retro lofi aesthetic (6 fps & 4 fps)
+    const step6 = (t * 6)|0;
+    const step4 = (t * 4)|0;
+
+    const fill = '#141e42';
+    // Active celestial border highlight during entrance bloom
+    const border = (isIntro && scale < 0.98) ? '#5c74b2' : '#33437a';
+    const hl = (isIntro && scale < 0.98) ? '#a0d8ef' : '#4e6298';
+
+    const midX = cx + 33;
+    const midY = cy + 15;
+
+    // Helper to draw scaled block centered around midX, midY
+    const srv = (bx, by, bw, bh, col) => {
+      if (scale >= 0.98) {
+        rv(bx, by, bw, bh, col);
+      } else {
+        const nx = midX + Math.round((bx - midX) * scale);
+        const ny = midY + Math.round((by - midY) * scale);
+        const nw = Math.max(1, Math.round(bw * scale));
+        const nh = Math.max(1, Math.round(bh * scale));
+        rv(nx, ny, nw, nh, col);
+      }
+    };
+
+    /* 1. Thought Cloud Body (organic pixel-art cloud silhouette) */
+    // Ambient thought glow around cloud
+    if (scale > 0.45) {
+      srv(cx+3, cy+3, 60, 24, 'rgba(80,120,200,0.08)');
+    }
+
+    // Main cloud lobe blocks
+    srv(cx+6, cy+5, 54, 20, fill);
+    srv(cx+8, cy+2, 22, 10, fill);
+    srv(cx+26, cy+1, 28, 12, fill);
+    srv(cx+2, cy+8, 12, 14, fill);
+    srv(cx+54, cy+8, 11, 14, fill);
+    srv(cx+10, cy+22, 22, 6, fill);
+    srv(cx+30, cy+23, 24, 5, fill);
+
+    // Top cloud border & highlight lines
+    srv(cx+9, cy+1, 20, 1, border);
+    srv(cx+27, cy, 26, 1, border);
+    srv(cx+3, cy+7, 6, 1, border);
+    srv(cx+54, cy+7, 9, 1, border);
+    // Top highlights (moonlight glint on cloud top)
+    srv(cx+10, cy+2, 18, 1, hl);
+    srv(cx+28, cy+1, 24, 1, hl);
+    if (scale >= 0.9) {
+      d(cx+4, cy+8, hl); d(cx+55, cy+8, hl);
+    }
+
+    // Left/Right side borders
+    srv(cx+1, cy+9, 1, 12, border);
+    srv(cx+65, cy+9, 1, 12, border);
+
+    // Bottom borders
+    srv(cx+3, cy+21, 8, 1, border);
+    srv(cx+10, cy+28, 22, 1, border);
+    srv(cx+30, cy+28, 25, 1, border);
+    srv(cx+55, cy+22, 10, 1, border);
+
+    /* 2. Mystical Contemplation Sequences (inside thought cloud) */
+    if (isIntro && scale < 0.75) {
+      // Early seedling of contemplation: radiant white/gold core
+      d(midX, midY, '#ffffff');
+      d(midX-1, midY, '#e6c468'); d(midX+1, midY, '#e6c468');
+      d(midX, midY-1, '#78a0d0'); d(midX, midY+1, '#78a0d0');
+    } else if (scale > 0.50) {
+      const phase = ((t / 2.6)|0) % 3;
+
+      if (phase === 0) {
+        /* Sequence A: Cosmic Constellation & Neural Sparks */
+        const n1x = cx + 16, n1y = cy + 14;
+        const n2x = cx + 29, n2y = cy + 9;
+        const n3x = cx + 45, n3y = cy + 11;
+        const n4x = cx + 34, n4y = cy + 21;
+
+        pxLine(n1x, n1y, n2x, n2y, 'rgba(100,130,200,0.3)', 0, H);
+        pxLine(n2x, n2y, n3x, n3y, 'rgba(100,130,200,0.3)', 0, H);
+        pxLine(n2x, n2y, n4x, n4y, 'rgba(100,130,200,0.3)', 0, H);
+        pxLine(n1x, n1y, n4x, n4y, 'rgba(100,130,200,0.3)', 0, H);
+
+        const drawStar = (sx, sy, seed) => {
+          const s = (step6 + seed) % 4;
+          if (s === 0) {
+            d(sx, sy, '#ffffff');
+          } else if (s === 1) {
+            d(sx, sy, '#e6c468');
+            d(sx-1, sy, '#78a0d0'); d(sx+1, sy, '#78a0d0');
+            d(sx, sy-1, '#78a0d0'); d(sx, sy+1, '#78a0d0');
+          } else if (s === 2) {
+            d(sx, sy, '#a0d8ef');
+          } else {
+            d(sx, sy, '#78a0d0');
+          }
+        };
+        drawStar(n1x, n1y, 0);
+        drawStar(n2x, n2y, 1);
+        drawStar(n3x, n3y, 2);
+        drawStar(n4x, n4y, 3);
+
+        const sparkT = (step6 % 12) / 12;
+        let spx, spy;
+        if (sparkT < 0.33) {
+          const p = sparkT / 0.33;
+          spx = (n1x + (n2x - n1x) * p)|0;
+          spy = (n1y + (n2y - n1y) * p)|0;
+        } else if (sparkT < 0.66) {
+          const p = (sparkT - 0.33) / 0.33;
+          spx = (n2x + (n3x - n2x) * p)|0;
+          spy = (n2y + (n3y - n2y) * p)|0;
+        } else {
+          const p = (sparkT - 0.66) / 0.34;
+          spx = (n3x + (n4x - n3x) * p)|0;
+          spy = (n3y + (n4y - n3y) * p)|0;
+        }
+        d(spx, spy, '#ffffff');
+        d(spx+1, spy, '#e6c468');
+
+      } else if (phase === 1) {
+        /* Sequence B: 8-bit Zen Galaxy Spiral (rotating at 6 fps) */
+        const rot = step6 % 4;
+        d(midX, midY, '#ffffff');
+        d(midX-1, midY, '#e6c468'); d(midX+1, midY, '#e6c468');
+        d(midX, midY-1, '#78a0d0'); d(midX, midY+1, '#78a0d0');
+
+        if (rot === 0) {
+          d(midX+3, midY-2, '#e6c468'); d(midX+4, midY-3, '#e6c468');
+          d(midX-3, midY+2, '#e6c468'); d(midX-4, midY+3, '#e6c468');
+          d(midX-2, midY-3, '#78a0d0'); d(midX-3, midY-4, '#78a0d0');
+          d(midX+2, midY+3, '#78a0d0'); d(midX+3, midY+4, '#78a0d0');
+        } else if (rot === 1) {
+          d(midX+4, midY, '#e6c468'); d(midX+5, midY-1, '#e6c468');
+          d(midX-4, midY, '#e6c468'); d(midX-5, midY+1, '#e6c468');
+          d(midX, midY-4, '#78a0d0'); d(midX-1, midY-5, '#78a0d0');
+          d(midX, midY+4, '#78a0d0'); d(midX+1, midY+5, '#78a0d0');
+        } else if (rot === 2) {
+          d(midX+2, midY+3, '#e6c468'); d(midX+3, midY+4, '#e6c468');
+          d(midX-2, midY-3, '#e6c468'); d(midX-3, midY-4, '#e6c468');
+          d(midX+3, midY-2, '#78a0d0'); d(midX+4, midY-3, '#78a0d0');
+          d(midX-3, midY+2, '#78a0d0'); d(midX-4, midY+3, '#78a0d0');
+        } else {
+          d(midX, midY+4, '#e6c468'); d(midX-1, midY+5, '#e6c468');
+          d(midX, midY-4, '#e6c468'); d(midX+1, midY-5, '#e6c468');
+          d(midX+4, midY, '#78a0d0'); d(midX+5, midY-1, '#78a0d0');
+          d(midX-4, midY, '#78a0d0'); d(midX-5, midY+1, '#78a0d0');
+        }
+
+        d(midX - 12 + ((step6 * 2) % 24), midY - 6, 'rgba(160,216,239,0.7)');
+        d(midX + 12 - ((step6 * 2) % 24), midY + 6, 'rgba(230,196,104,0.7)');
+
+      } else {
+        /* Sequence C: Blooming Insight Lotus / Third Eye Glyph */
+        const bloom = step4 % 4;
+        rv(midX-4, midY+3, 9, 2, '#2f5742');
+        rv(midX-6, midY+4, 13, 1, '#1c3530');
+        d(midX, midY, '#e6c468');
+        d(midX, midY-1, '#ffffff');
+
+        if (bloom === 0) {
+          rv(midX-2, midY-1, 5, 3, '#557064');
+          d(midX, midY-2, '#9fc0e8');
+        } else if (bloom === 1) {
+          d(midX-3, midY, '#78a0d0'); d(midX+3, midY, '#78a0d0');
+          d(midX-2, midY-2, '#9fc0e8'); d(midX+2, midY-2, '#9fc0e8');
+          d(midX, midY-3, '#ffffff');
+        } else if (bloom === 2) {
+          d(midX-4, midY, '#9fc0e8'); d(midX+4, midY, '#9fc0e8');
+          d(midX-3, midY-2, '#9fc0e8'); d(midX+3, midY-2, '#9fc0e8');
+          d(midX-1, midY-3, '#e6c468'); d(midX+1, midY-3, '#e6c468');
+          d(midX, midY-4, '#ffffff');
+        } else {
+          d(midX-5, midY, '#e6c468'); d(midX+5, midY, '#e6c468');
+          d(midX-3, midY-3, '#a0d8ef'); d(midX+3, midY-3, '#a0d8ef');
+          d(midX, midY-5, '#ffffff');
+          d(midX-1, midY-1, '#e6c468'); d(midX+1, midY-1, '#e6c468');
+        }
+      }
+    } else {
+      /* Condensed Wisdom Core Pearl */
+      const pearlR = Math.max(2, (scale * 9)|0);
+      rv(midX - pearlR, midY - pearlR, pearlR * 2 + 1, pearlR * 2 + 1, '#16224a');
+      rv(midX - pearlR + 1, midY - pearlR + 1, (pearlR - 1) * 2 + 1, (pearlR - 1) * 2 + 1, '#e6c468');
+      d(midX, midY, '#ffffff');
+      d(midX-1, midY, '#ffffff'); d(midX+1, midY, '#ffffff');
+      d(midX, midY-1, '#ffffff'); d(midX, midY+1, '#ffffff');
+    }
+
+    /* 3. Drifting stardust motes */
+    for (let i = 0; i < 3; i++) {
+      const mx = (midX - 15 + ((t * 8 + i * 15)|0) % 30);
+      const my = (midY - 12 - ((t * 6 + i * 9)|0) % 12);
+      d(mx, my, (i === 1) ? '#e6c468' : '#a0d8ef');
+    }
+
+    /* 4. Radiant Epiphany Flash */
+    if (coreFlash > 0.05) {
+      const b = Math.max(1, (coreFlash * 12)|0);
+      rv(midX - b, midY, b * 2 + 1, 1, '#ffffff');
+      rv(midX, midY - b, 1, b * 2 + 1, '#ffffff');
+      d(midX - b + 1, midY - b + 1, '#e6c468');
+      d(midX + b - 1, midY - b + 1, '#e6c468');
+      d(midX - b + 1, midY + b - 1, '#e6c468');
+      d(midX + b - 1, midY + b - 1, '#e6c468');
+    }
+  }
+
+  /* Desktop thought animation: lowered on screen to sit comfortably below user's message */
+  function drawThought(){
+    if (MQ.matches) return; // on mobile handled by renderMobileThought()
+    if (!A.thinking && A.transPhase === 'IDLE') return;
+    if (A.transPhase === 'BLOOMING' || A.transPhase === 'SETTLING') return;
+
+    const tx = S.toad.x, ty = S.toad.y;
+    const t = A.thinkTime;
+    const floatY = (A.transPhase === 'IDLE') ? ((Math.sin(t * 1.5) * 1.2)|0) : 0;
+
+    const cy = Math.max(66, (A.sentText ? (A.sentBoxY + A.sentTh + 8) : 66)) + floatY;
+    const cx = 142;
+
+    const step4 = (t * 4)|0;
+    const step6 = (t * 6)|0;
+
+    const isIntro = (A.thinking && A.thinkIntro < 1.0);
+    let scale = 1.0;
+    let coreFlash = 0;
+    let streamProg = -1;
+
+    if (isIntro) {
+      // Thought entrance bloom across 0.85s
+      const p = A.thinkIntro;
+      if (p < 0.38) {
+        scale = 0; // wait for orbs to sprout first
+      } else {
+        const cp = (p - 0.38) / 0.62; // 0 -> 1
+        if (cp < 0.15) {
+          scale = 0.18;
+          coreFlash = 0.9; // birth flash!
+        } else if (cp < 0.35) {
+          scale = 0.42;
+          coreFlash = 0.5;
+        } else if (cp < 0.55) {
+          scale = 0.70;
+          coreFlash = 0.2;
+        } else if (cp < 0.75) {
+          scale = 0.90;
+          coreFlash = 0.05;
+        } else if (cp < 0.90) {
+          scale = 1.035; // gentle elastic overshoot bounce
+          coreFlash = 0;
+        } else {
+          scale = 1.00;
+          coreFlash = 0;
+        }
+      }
+    } else if (A.transPhase === 'CONDENSING') {
+      const cp = Math.min(1, A.transTimer / 0.38);
+      scale = Math.max(0.20, 1.0 - 0.80 * cp);
+      coreFlash = Math.sin(cp * Math.PI);
+    } else if (A.transPhase === 'STREAMING') {
+      scale = 0.20;
+      streamProg = Math.min(1, A.transTimer / 0.32);
+    }
+
+    /* Rising thought orbs: arcing from toad's left temple across to the thought cloud */
+    // Connector 1: near toad head
+    const o1x = (tx + 10 + (Math.cos(t * 2.0) * 0.8)|0);
+    const o1y = (cy + 10 + (Math.sin(t * 2.5) * 1.0)|0);
+    if (!isIntro || A.thinkIntro >= 0.12) {
+      if (isIntro && A.thinkIntro < 0.22) {
+        d(o1x+1, o1y+1, '#ffffff'); // sprouting glint
+      } else {
+        const o1Glow = (streamProg >= 0.65);
+        if (o1Glow) {
+          rv(o1x-1, o1y-1, 5, 5, '#ffffff');
+          d(o1x, o1y, '#e6c468');
+        } else {
+          rv(o1x, o1y, 3, 3, '#16224a');
+          rv(o1x, o1y, 3, 1, '#33437a');
+          rv(o1x, o1y+2, 3, 1, '#33437a');
+          d(o1x+1, o1y+1, (step4 % 2 === 0) ? '#78a0d0' : '#a0d8ef');
+        }
+      }
+    }
+
+    // Connector 2: midway
+    const o2x = (tx - 3 + (Math.cos(t * 1.8 + 1.0) * 1.2)|0);
+    const o2y = (cy + 12 + (Math.sin(t * 2.2 + 1.2) * 1.2)|0);
+    if (!isIntro || A.thinkIntro >= 0.24) {
+      if (isIntro && A.thinkIntro < 0.35) {
+        rv(o2x+1, o2y+1, 3, 3, '#ffffff'); // sprouting glint
+      } else {
+        const o2Glow = (streamProg >= 0.30 && streamProg < 0.70);
+        if (o2Glow) {
+          rv(o2x-1, o2y-1, 7, 7, '#ffffff');
+          rv(o2x, o2y, 5, 5, '#e6c468');
+          d(o2x+2, o2y+2, '#ffffff');
+        } else {
+          rv(o2x+1, o2y, 3, 5, '#16224a');
+          rv(o2x, o2y+1, 5, 3, '#16224a');
+          rv(o2x+1, o2y, 3, 1, '#33437a');
+          rv(o2x+1, o2y+4, 3, 1, '#33437a');
+          rv(o2x, o2y+1, 1, 3, '#33437a');
+          rv(o2x+4, o2y+1, 1, 3, '#33437a');
+          d(o2x+1, o2y+1, '#78a0d0');
+          if ((step6 + 1) % 3 === 0) d(o2x+2, o2y+2, '#e6c468');
+        }
+      }
+    }
+
+    // Connector 3: just beside thought cloud
+    const o3x = (tx - 16 + (Math.cos(t * 1.6 + 2.0) * 1.5)|0);
+    const o3y = (cy + 14 + (Math.sin(t * 2.0 + 2.0) * 1.2)|0);
+    if (!isIntro || A.thinkIntro >= 0.36) {
+      if (isIntro && A.thinkIntro < 0.48) {
+        rv(o3x+2, o3y+2, 3, 3, '#ffffff'); // sprouting glint
+      } else {
+        const o3Glow = (streamProg >= 0.0 && streamProg < 0.40);
+        if (o3Glow) {
+          rv(o3x-1, o3y-1, 9, 9, '#ffffff');
+          rv(o3x, o3y, 7, 7, '#e6c468');
+          d(o3x+3, o3y+3, '#ffffff');
+        } else {
+          rv(o3x+1, o3y, 5, 7, '#16224a');
+          rv(o3x, o3y+1, 7, 5, '#16224a');
+          rv(o3x+1, o3y, 5, 1, '#33437a');
+          rv(o3x+1, o3y+6, 5, 1, '#33437a');
+          rv(o3x, o3y+1, 1, 5, '#33437a');
+          rv(o3x+6, o3y+1, 1, 5, '#33437a');
+          d(o3x+2, o3y+2, '#78a0d0');
+          d(o3x+3, o3y+2, '#a0d8ef');
+        }
+      }
+    }
+
+    // Traveling spark from brow to mouth when stream completes
+    if (streamProg >= 0.75) {
+      const spFrac = (streamProg - 0.75) / 0.25;
+      const sparkY = (ty + 8 + spFrac * 17)|0;
+      d(tx + 35, sparkY, '#ffffff');
+      d(tx + 34, sparkY, '#e6c468'); d(tx + 36, sparkY, '#e6c468');
+    }
+
+    if (scale > 0) {
+      drawThoughtCloud(cx, cy, t, scale, coreFlash, isIntro);
+    }
   }
 
   /* ---------- 16. ambient / post-processing (cool, moonlit, peaceful) ---------- */
@@ -904,13 +1412,95 @@ bottom: calc(4px + env(safe-area-inset-bottom));
     A.sway+=dt*1.1;       // wind for the grass / flowers
     A.breath+=dt*1.4;     // toad breathing
 
-    if(A.bubbleFrame !== A.bubbleTarget) {
-      A.bubbleTimer += dt;
-      if(A.bubbleTimer > 0.05) {
-        A.bubbleTimer = 0;
-        A.bubbleFrame += Math.sign(A.bubbleTarget - A.bubbleFrame) * 0.25;
-        if(A.bubbleFrame < 0) A.bubbleFrame = 0;
-        if(A.bubbleFrame > 1) A.bubbleFrame = 1;
+    if (A.thinking) {
+      A.thinkTime += dt;
+      if (A.thinkIntro < 1.0) {
+        A.thinkIntro = Math.min(1.0, A.thinkIntro + dt / 0.85);
+      }
+      if (A.toadAwake > 0) A.toadAwake = Math.max(0, A.toadAwake - dt * 2);
+    }
+
+    /* Seamless Multi-Stage Transition: CONDENSING -> STREAMING -> BLOOMING -> SETTLING */
+    if (A.transPhase !== 'IDLE') {
+      A.transTimer += dt;
+      A.thinkTime += dt;
+
+      if (A.transPhase === 'CONDENSING') {
+        // Epiphany & Condensation (0.0s -> 0.38s)
+        if (A.transTimer >= 0.38) {
+          A.transPhase = 'STREAMING';
+          A.transTimer = 0;
+        }
+      } else if (A.transPhase === 'STREAMING') {
+        // Stream of insight down connectors to mouth (0.0s -> 0.32s)
+        const sp = Math.min(1, A.transTimer / 0.32);
+        if (sp >= 0.5) {
+          A.toadAwake = Math.min(1, A.toadAwake + dt * 4);
+        }
+        if (sp >= 0.75) {
+          A.mouthSpark = 1;
+        }
+        if (A.transTimer >= 0.32) {
+          A.transPhase = 'BLOOMING';
+          A.transTimer = 0;
+          A.mouthSpark = 0;
+          if (A.pendingReply) {
+            const reply = A.pendingReply;
+            A.pendingReply = null;
+            if (MQ.matches) {
+              const pinned = mobilePinnedBottom();
+              const toadEl = mobileAppend(reply, 'toad');
+              if (pinned) mobileScrollToTop(toadEl);
+            } else {
+              showText(reply);
+            }
+          }
+        }
+      } else if (A.transPhase === 'BLOOMING') {
+        // Speech bubble bloom (0.0s -> 0.52s)
+        const bp = Math.min(1, A.transTimer / 0.52);
+        A.bubbleProgress = bp;
+        if (A.transTimer >= 0.52) {
+          A.transPhase = 'SETTLING';
+          A.transTimer = 0;
+          A.bubbleProgress = 1;
+        }
+      } else if (A.transPhase === 'SETTLING') {
+        // Final settle & rest (0.0s -> 0.20s)
+        if (A.transTimer >= 0.20) {
+          A.transPhase = 'IDLE';
+          A.transTimer = 0;
+        }
+      }
+    } else if (A.bubbleTarget === 1) {
+      // Toad stays serenely present while speaking
+      A.toadAwake = Math.max(0.3, A.toadAwake - dt * 0.05);
+    }
+
+    /* Stepped, crisp pixel-art bubble entrance */
+    if (A.bubbleTarget === 1) {
+      const p = A.bubbleProgress;
+      if (p <= 0) {
+        A.bubbleFrame = 0;
+      } else if (p < 0.15) {
+        A.bubbleFrame = 0.18; // tiny horizontal seed
+      } else if (p < 0.30) {
+        A.bubbleFrame = 0.36; // horizontal unrolling
+      } else if (p < 0.50) {
+        A.bubbleFrame = 0.60; // vertical expanding
+      } else if (p < 0.70) {
+        A.bubbleFrame = 0.82; // vertical expansion reaching top
+      } else if (p < 0.88) {
+        A.bubbleFrame = 1.025; // gentle overshoot bounce
+      } else {
+        A.bubbleFrame = 1.00; // settled at full rest
+      }
+    } else if (A.bubbleTarget === 0) {
+      if (A.bubbleProgress > 0) {
+        A.bubbleProgress = Math.max(0, A.bubbleProgress - 0.25);
+        A.bubbleFrame = A.bubbleProgress;
+      } else {
+        A.bubbleFrame = 0;
       }
     }
 
@@ -939,7 +1529,7 @@ bottom: calc(4px + env(safe-area-inset-bottom));
 
     /* sync DOM text */
     const bText = document.getElementById('bubbleText');
-    if (A.bubbleFrame === 0) {
+    if (A.bubbleFrame === 0 && A.chatState !== 'SWIPING_UP') {
       bText.style.display = 'none';
     } else {
       bText.style.display = 'flex';
@@ -949,20 +1539,16 @@ bottom: calc(4px + env(safe-area-inset-bottom));
       const gap = 8;
       if (A.sentText) {
         // Limit toad growth so it never squashes the sent message
-        // We add an extra +8 to the limit to account for the exclusion zone which might push the bubble up!
         currentTopLimit = Math.max(5, A.sentBoxY + A.sentRequestedTh + gap + 8);
       }
       A.targetTh = Math.min(A.requestedTh || 110, uby - currentTopLimit - gap);
-      // When the text is taller than the box it has to fit in, centering pushes
-      // the first lines above the top edge where they're clipped and can't be
-      // scrolled to. Anchor to the top in that case so it reads from line one.
       const textOverflows = A.requestedTh > A.targetTh + 0.5;
       bText.style.justifyContent = textOverflows ? 'flex-start' : 'center';
 
       const tw = A.targetTw || 160, th = A.targetTh;
       const f = A.bubbleFrame;
-      const w = (tw * f);
-      const h = (th * f);
+      const w = Math.round(tw * Math.min(1.02, f));
+      const h = Math.round(th * Math.min(1.02, f));
       const bx = TBUB_R - w;
 
       /* Toad Bubble position */
@@ -994,44 +1580,123 @@ bottom: calc(4px + env(safe-area-inset-bottom));
         }
       }
 
+      const wrapperH = document.getElementById('canvasWrapper').clientHeight;
+      const scaleY = wrapperH / H;
+      bText.style.fontSize = (6.5 * scaleY) + 'px';
+
       if (A.chatState === 'SWIPING_UP') {
-        bText.style.display = (A.oldBy < -150 || !A.oldTh) ? 'none' : 'flex';
+        const fade = Math.max(0, Math.min(1, (A.oldBy + 40) / 60));
+        bText.style.display = (A.oldBy < -120 || !A.oldTh || fade <= 0.02) ? 'none' : 'flex';
+        bText.style.flexDirection = 'column';
+        bText.style.justifyContent = 'center';
+        bText.style.paddingTop = '';
         bText.style.left = ((A.oldBx / W) * 100) + '%';
         bText.style.top = ((A.oldBy / H) * 100) + '%';
         bText.style.width = ((A.oldTw / W) * 100) + '%';
         bText.style.height = ((A.oldTh / H) * 100) + '%';
-        bText.style.opacity = Math.max(0, 1 + (A.oldBy / 50));
+        bText.style.opacity = fade.toFixed(2);
       } else {
         bText.style.left = ((bx / W) * 100) + '%';
         bText.style.top = (((by + A.scroll) / H) * 100) + '%';
         bText.style.width = ((w / W) * 100) + '%';
         bText.style.height = ((h / H) * 100) + '%';
+        bText.style.paddingTop = textOverflows ? (4 * scaleY) + 'px' : '';
 
-        const wrapperH = document.getElementById('canvasWrapper').clientHeight;
-        const scaleY = wrapperH / H;
-        bText.style.fontSize = (6.5 * scaleY * Math.max(0.1, f)) + 'px';
-        // A little breathing room at the top while overflowing and top-anchored,
-        // so the first line isn't flush against the bubble's border.
-        bText.style.paddingTop = textOverflows ? (4 * scaleY * Math.max(0.1, f)) + 'px' : '';
-        bText.style.opacity = Math.pow(f, 3);
+        // Clean text fade-in as bubble unfolds (no squished font distortion)
+        if (A.bubbleProgress < 0.35) {
+          bText.style.opacity = 0;
+          bText.style.overflow = 'hidden';
+        } else if (A.bubbleProgress < 0.9) {
+          bText.style.opacity = ((A.bubbleProgress - 0.35) / 0.55).toFixed(2);
+          bText.style.overflow = 'hidden';
+        } else {
+          bText.style.opacity = 1;
+          bText.style.overflowY = textOverflows ? 'auto' : 'hidden';
+        }
       }
     }
 
-    // Animate SWIPING_UP
+    // Animate SWIPING_UP with smooth retro momentum and tactile elastic cushion
     if (A.chatState === 'SWIPING_UP') {
-      const speed = 350 * dt;
-      if (A.oldBy > -160) A.oldBy -= speed * 1.5;
+      A.swipeProgress = Math.min(1.0, A.swipeProgress + dt / A.swipeDuration);
+      const p = A.swipeProgress;
 
-      const targetSentY = 15;
-      if (A.sentBoxY > targetSentY) {
-        A.sentBoxY -= speed;
-        if (A.sentBoxY < targetSentY) A.sentBoxY = targetSentY;
+      let easeP;
+      if (p < 0.85) {
+        const t = p / 0.85;
+        const t2 = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+        easeP = t2 * 1.015;
+      } else {
+        const t = (p - 0.85) / 0.15;
+        const settle = 1 - Math.pow(1 - t, 2);
+        easeP = 1.015 - 0.015 * settle; // tactile cushion into rest
       }
-      // maintain requested height during swipe
+
+      // 1. Sent user message ascends smoothly
+      const targetSentY = 15;
+      A.sentBoxY = A.sentBoxYStart + (targetSentY - A.sentBoxYStart) * easeP;
       A.sentTh = A.sentRequestedTh;
+
+      // 2. Previous user message scrolls up into the sky and dissolves
+      if (A.oldUserText && A.oldUserTh > 0) {
+        A.oldUserBy = A.oldUserByStart - (50 * easeP);
+      }
+
+      // 3. Previous toad bubble ascends into the sky and dissolves
+      if (A.oldTh > 0) {
+        A.oldBy = A.oldByStart - (120 * easeP);
+      }
+
+      // 4. When swipe-up reaches resting position
+      if (A.swipeProgress >= 1.0) {
+        A.sentBoxY = targetSentY;
+        A.bubbleFrame = 0;
+        A.bubbleTarget = 0;
+        A.bubbleProgress = 0;
+        A.oldTh = 0;
+        A.oldUserText = null;
+        A.oldUserTh = 0;
+        A.chatState = 'IDLE';
+
+        if (A.pendingReply) {
+          // Reply arrived during swipe-up; smoothly condense
+          A.thinking = false;
+          A.transPhase = 'CONDENSING';
+          A.transTimer = 0;
+        } else {
+          // Enter thinking state with smooth, choreographed entrance animation
+          A.thinking = true;
+          A.thinkTime = 0;
+          A.thinkIntro = 0;
+          A.transPhase = 'IDLE';
+          A.transTimer = 0;
+          A.toadAwake = 0;
+          A.mouthSpark = 0;
+        }
+      }
     }
 
-    // Sync sentMessage DOM
+    // Sync oldSentMessage DOM (previous user message scrolling up into history)
+    const oldSentDom = document.getElementById('oldSentMessage');
+    if (A.chatState === 'SWIPING_UP' && A.oldUserText && A.oldUserTh > 0) {
+      oldSentDom.innerText = A.oldUserText;
+      const oldFade = Math.max(0, Math.min(1, (A.oldUserBy + 25) / 35));
+      oldSentDom.style.display = (A.oldUserBy < -80 || oldFade <= 0.02) ? 'none' : 'flex';
+      oldSentDom.style.flexDirection = 'column';
+      oldSentDom.style.justifyContent = 'center';
+      oldSentDom.style.left = ((10 / W) * 100) + '%';
+      oldSentDom.style.top = (((A.oldUserBy + A.scroll) / H) * 100) + '%';
+      oldSentDom.style.width = ((160 / W) * 100) + '%';
+      oldSentDom.style.height = ((A.oldUserTh / H) * 100) + '%';
+      oldSentDom.style.opacity = oldFade.toFixed(2);
+      const wrapperH = document.getElementById('canvasWrapper').clientHeight;
+      const scaleY = wrapperH / H;
+      oldSentDom.style.fontSize = (6.5 * scaleY) + 'px';
+    } else if (oldSentDom) {
+      oldSentDom.style.display = 'none';
+    }
+
+    // Sync sentMessage DOM (new user message)
     const sText = document.getElementById('sentMessage');
     if (A.sentText) {
       sText.style.display = 'flex';
@@ -1065,7 +1730,9 @@ bottom: calc(4px + env(safe-area-inset-bottom));
     const fill = TH.tbFill, border = TH.tbBorder;
 
     if (A.chatState === 'SWIPING_UP') {
-      if (A.oldTh <= 0 || A.oldBy < -150) return;
+      if (A.oldTh <= 0 || A.oldBy < -120) return;
+      const fade = Math.max(0, Math.min(1, (A.oldBy + 40) / 60));
+      if (fade <= 0.02) return;
       f = 1;
       tw = A.oldTw;
       th = A.oldTh;
@@ -1076,35 +1743,47 @@ bottom: calc(4px + env(safe-area-inset-bottom));
       f = A.bubbleFrame;
       tw = A.targetTw || 160;
       th = A.targetTh || 110;
-      const w = (tw * f)|0;
-      const h = (th * f)|0;
+      const w = Math.round(tw * Math.min(1.02, f));
+      const h = Math.round(th * Math.min(1.02, f));
       if(w < 4 || h < 4) return;
       bx = (TBUB_R - w)|0;
       const anchorY = A.anchorY || 100;
       by = (anchorY - (h * 0.64))|0;
     }
 
-    const w = (tw * f)|0;
-    const h = (th * f)|0;
+    const w = Math.round(tw * Math.min(1.02, f));
+    const h = Math.round(th * Math.min(1.02, f));
     by += A.scroll;   // slide down with the scroll-back view (0 in normal use)
 
+    // Active celestial starlight border during the bloom, settling into calm border
+    let activeBorder = (A.bubbleProgress < 0.6) ? '#829fd8' : ((A.bubbleProgress < 0.95) ? '#5c74b2' : border);
+    let activeFill = fill;
+
+    if (A.chatState === 'SWIPING_UP') {
+      const fade = Math.max(0, Math.min(1, (A.oldBy + 40) / 60));
+      if (fade < 0.95) {
+        activeFill = `rgba(22,34,74,${fade.toFixed(2)})`;
+        activeBorder = `rgba(51,67,122,${fade.toFixed(2)})`;
+      }
+    }
+
     /* Rounded rect body */
-    rv(bx+2, by, w-4, h, fill);
-    rv(bx, by+2, w, h-4, fill);
-    rv(bx+1, by+1, w-2, h-2, fill);
+    rv(bx+2, by, w-4, h, activeFill);
+    rv(bx, by+2, w, h-4, activeFill);
+    rv(bx+1, by+1, w-2, h-2, activeFill);
 
-    rv(bx+2, by-1, w-4, 1, border);
-    rv(bx+2, by+h, w-4, 1, border);
-    rv(bx-1, by+2, 1, h-4, border);
-    rv(bx+w, by+2, 1, h-4, border);
+    rv(bx+2, by-1, w-4, 1, activeBorder);
+    rv(bx+2, by+h, w-4, 1, activeBorder);
+    rv(bx-1, by+2, 1, h-4, activeBorder);
+    rv(bx+w, by+2, 1, h-4, activeBorder);
 
-    d(bx+1, by, border); d(bx, by+1, border);
-    d(bx+w-2, by, border); d(bx+w-1, by+1, border);
-    d(bx+1, by+h-1, border); d(bx, by+h-2, border);
-    d(bx+w-2, by+h-1, border); d(bx+w-1, by+h-2, border);
+    d(bx+1, by, activeBorder); d(bx, by+1, activeBorder);
+    d(bx+w-2, by, activeBorder); d(bx+w-1, by+1, activeBorder);
+    d(bx+1, by+h-1, activeBorder); d(bx, by+h-2, activeBorder);
+    d(bx+w-2, by+h-1, activeBorder); d(bx+w-1, by+h-2, activeBorder);
 
-    /* Tail pointing to toad's mouth (only at rest — it detaches once scrolled) */
-    if(f === 1 && A.scroll < 0.5) {
+    /* Tail pointing to toad's mouth (connects seamlessly during live speech; detaches during swipe up) */
+    if(f >= 0.05 && A.scroll < 0.5 && A.chatState !== 'SWIPING_UP') {
       let tailStartTx = bx+w-2;
       let ty = 100;
       let bottomY = by + h - 1;
@@ -1118,38 +1797,38 @@ bottom: calc(4px + env(safe-area-inset-bottom));
 
         // Vertical pipe connecting from the flat bottom edge
         rv(pipeTx, bottomY, 10, ch, fill);
-        rv(pipeTx-1, bottomY, 1, ch + 4, border); // left border
-        rv(pipeTx+10, bottomY, 1, ch, border);    // right border
+        rv(pipeTx-1, bottomY, 1, ch + 4, activeBorder); // left border
+        rv(pipeTx+10, bottomY, 1, ch, activeBorder);    // right border
 
         // Horizontal bridge linking pipe to original tail path
         let bridgeWidth = (tailStartTx + 10) - pipeTx;
         rv(pipeTx, ty, bridgeWidth, 3, fill);
-        rv(pipeTx, ty+3, bridgeWidth, 1, border); // bottom border
-        rv(pipeTx+11, ty-1, bridgeWidth - 11, 1, border); // top border
+        rv(pipeTx, ty+3, bridgeWidth, 1, activeBorder); // bottom border
+        rv(pipeTx+11, ty-1, bridgeWidth - 11, 1, activeBorder); // top border
 
         tx = tailStartTx + 8;
       } else {
         // Bubble safely overlaps tail.
         tx = tailStartTx;
         rv(tx, ty, 10, 3, fill);
-        rv(tx, ty-1, 10, 1, border);
-        rv(tx, ty+3, 10, 1, border);
+        rv(tx, ty-1, 10, 1, activeBorder);
+        rv(tx, ty+3, 10, 1, activeBorder);
         tx += 8;
       }
 
       rv(tx, ty, 12, 3, fill);
-      rv(tx, ty-1, 12, 1, border); rv(tx, ty+3, 12, 1, border);
+      rv(tx, ty-1, 12, 1, activeBorder); rv(tx, ty+3, 12, 1, activeBorder);
 
       tx += 10;
       rv(tx, ty, 8, 2, fill);
-      rv(tx, ty-1, 8, 1, border); rv(tx, ty+2, 8, 1, border);
+      rv(tx, ty-1, 8, 1, activeBorder); rv(tx, ty+2, 8, 1, activeBorder);
 
       tx += 7;
       rv(tx, ty, 4, 1, fill);
-      rv(tx, ty-1, 4, 1, border); rv(tx, ty+1, 4, 1, border);
+      rv(tx, ty-1, 4, 1, activeBorder); rv(tx, ty+1, 4, 1, activeBorder);
 
       tx += 3;
-      rv(tx, ty, 2, 1, border);
+      rv(tx, ty, 2, 1, activeBorder);
     }
   }
 
@@ -1180,26 +1859,63 @@ bottom: calc(4px + env(safe-area-inset-bottom));
       d(bx+w-2, by+h-1, border); d(bx+w-1, by+h-2, border);
     }
 
-    // 2. Draw Detached Sent Message Bubble
+    // 2. Draw Old Sent Message Bubble (scrolling up and dissolving into the sky)
+    if (A.chatState === 'SWIPING_UP' && A.oldUserText && A.oldUserTh > 0) {
+      const oldFade = Math.max(0, Math.min(1, (A.oldUserBy + 25) / 35));
+      if (oldFade > 0.02 && A.oldUserBy > -80) {
+        const ow = 160;
+        const oh = A.oldUserTh|0;
+        const obx = 10;
+        const oby = (A.oldUserBy + A.scroll)|0;
+        const oFill = (oldFade < 0.95) ? `rgba(28,41,80,${oldFade.toFixed(2)})` : fill;
+        const oBorder = (oldFade < 0.95) ? `rgba(58,76,134,${oldFade.toFixed(2)})` : border;
+
+        rv(obx+2, oby, ow-4, oh, oFill);
+        rv(obx, oby+2, ow, oh-4, oFill);
+        rv(obx+1, oby+1, ow-2, oh-2, oFill);
+
+        rv(obx+2, oby-1, ow-4, 1, oBorder);
+        rv(obx+2, oby+oh, ow-4, 1, oBorder);
+        rv(obx-1, oby+2, 1, oh-4, oBorder);
+        rv(obx+ow, oby+2, 1, oh-4, oBorder);
+
+        d(obx+1, oby, oBorder); d(obx, oby+1, oBorder);
+        d(obx+ow-2, oby, oBorder); d(obx+ow-1, oby+1, oBorder);
+        d(obx+1, oby+oh-1, oBorder); d(obx, oby+oh-2, oBorder);
+        d(obx+ow-2, oby+oh-1, oBorder); d(obx+ow-1, oby+oh-2, oBorder);
+      }
+    }
+
+    // 3. Draw Detached Sent Message Bubble (gliding up from bottom)
     if (A.sentText && A.sentTh > 0) {
       const sw = 160;
       const sh = A.sentTh|0;
       const sbx = 10;
       const sby = (A.sentBoxY + A.scroll)|0;
 
+      // Active starlight border during the swipe up ascent:
+      let activeBorder = border;
+      if (A.chatState === 'SWIPING_UP') {
+        if (A.swipeProgress < 0.60) {
+          activeBorder = '#829fd8'; // luminous starlight cyan during ascent
+        } else if (A.swipeProgress < 0.88) {
+          activeBorder = '#5c74b2'; // cooling celestial indigo
+        }
+      }
+
       rv(sbx+2, sby, sw-4, sh, fill);
       rv(sbx, sby+2, sw, sh-4, fill);
       rv(sbx+1, sby+1, sw-2, sh-2, fill);
 
-      rv(sbx+2, sby-1, sw-4, 1, border);
-      rv(sbx+2, sby+sh, sw-4, 1, border);
-      rv(sbx-1, sby+2, 1, sh-4, border);
-      rv(sbx+sw, sby+2, 1, sh-4, border);
+      rv(sbx+2, sby-1, sw-4, 1, activeBorder);
+      rv(sbx+2, sby+sh, sw-4, 1, activeBorder);
+      rv(sbx-1, sby+2, 1, sh-4, activeBorder);
+      rv(sbx+sw, sby+2, 1, sh-4, activeBorder);
 
-      d(sbx+1, sby, border); d(sbx, sby+1, border);
-      d(sbx+sw-2, sby, border); d(sbx+sw-1, sby+1, border);
-      d(sbx+1, sby+sh-1, border); d(sbx, sby+sh-2, border);
-      d(sbx+sw-2, sby+sh-1, border); d(sbx+sw-1, sby+sh-2, border);
+      d(sbx+1, sby, activeBorder); d(sbx, sby+1, activeBorder);
+      d(sbx+sw-2, sby, activeBorder); d(sbx+sw-1, sby+1, activeBorder);
+      d(sbx+1, sby+sh-1, activeBorder); d(sbx, sby+sh-2, activeBorder);
+      d(sbx+sw-2, sby+sh-1, activeBorder); d(sbx+sw-1, sby+sh-2, activeBorder);
     }
   }
 
@@ -1218,7 +1934,10 @@ bottom: calc(4px + env(safe-area-inset-bottom));
     drawField();                     // green field ground
     drawGrass(grassB);               // background grass (behind the toad)
     drawFlowers();
-    if (!MQ.matches) drawToad();     // on mobile the toad is drawn in the corner instead
+    if (!MQ.matches) {
+      drawToad();                    // toad on field
+      drawThought();                 // thought animation above toad
+    }
     drawGrass(grassF);               // foreground grass swaying in front of the toad
     drawAmbient();                   // cool moonlight wash + fireflies
     if (MQ.matches) {
@@ -1229,6 +1948,7 @@ bottom: calc(4px + env(safe-area-inset-bottom));
          the DOM text overlays. */
       renderSceneTop();    // sky filling the screen above the field
       renderToadCorner();
+      renderMobileThought();
     } else {
       drawHistory();
       drawUserBubble();
@@ -1278,7 +1998,12 @@ bottom: calc(4px + env(safe-area-inset-bottom));
   }
 
   function showText(text) {
-    if(!text) { A.bubbleTarget = 0; return; }
+    if(!text) {
+      A.bubbleTarget = 0;
+      A.bubbleProgress = 0;
+      A.bubbleFrame = 0;
+      return;
+    }
     const bText = document.getElementById('bubbleText');
     bText.innerHTML = '<div>' + formatMessage(text) + '</div>';
 
@@ -1306,6 +2031,8 @@ bottom: calc(4px + env(safe-area-inset-bottom));
     A.targetTw = 160; // Always matching user bubble width
     A.requestedTh = Math.max(12, calcTh + 4);
     A.bubbleTarget = 1;
+    A.bubbleProgress = 0;
+    A.bubbleTimer = 0;
   }
 
   document.getElementById('userInput').addEventListener('input', (e) => {
@@ -1328,11 +2055,10 @@ bottom: calc(4px + env(safe-area-inset-bottom));
      these never run (the callers are guarded by `MQ.matches`),
      so the canvas swipe-up system is untouched. */
   const mobileChat = document.getElementById('mobile-chat');
-  let mobileThink = null;       // the "..." toad bubble awaiting a real reply
   let mobileExchange = null;    // container for the in-progress exchange
 
   function mobileScrollBottom() {
-    mobileChat.scrollTop = mobileChat.scrollHeight;
+    mobileChat.scrollTo({ top: mobileChat.scrollHeight, behavior: 'smooth' });
   }
   // True when the user is parked at (or near) the newest message rather than
   // scrolled up reading history — used to avoid yanking them down on a reply.
@@ -1351,13 +2077,14 @@ bottom: calc(4px + env(safe-area-inset-bottom));
   function mobileAppend(text, role) {
     const msg = document.createElement('div');
     msg.className = 'mobile-msg ' + role;
-    msg.textContent = text;
     if (role === 'user') {
+      msg.textContent = text;
       mobileExchange = document.createElement('div');
       mobileExchange.className = 'mobile-exchange';
       mobileExchange.appendChild(msg);
       mobileChat.appendChild(mobileExchange);
     } else {
+      msg.innerHTML = '<div>' + formatMessage(text) + '</div>';
       (mobileExchange || mobileChat).appendChild(msg);
     }
     mobileScrollBottom();   // keep the newest message in view at the bottom
@@ -1372,22 +2099,35 @@ bottom: calc(4px + env(safe-area-inset-bottom));
 
     A.scroll = 0; A.scrollTarget = 0;   // a new exchange snaps back to the live view
 
-    // Snapshot old toad bubble properties for swiping
-    A.oldTw = A.targetTw * A.bubbleFrame;
-    A.oldTh = A.targetTh * A.bubbleFrame;
-    A.oldBy = (A.anchorY || 100) - (A.oldTh * 0.64);
-    A.oldBx = TBUB_R - A.oldTw;
+    // 1. Snapshot previous user message (if one is currently at top)
+    if (A.sentText) {
+      A.oldUserText = A.sentText;
+      A.oldUserTh = A.sentTh;
+      A.oldUserByStart = A.sentBoxY;
+      A.oldUserBy = A.oldUserByStart;
+    } else {
+      A.oldUserText = null;
+      A.oldUserTh = 0;
+    }
 
-    // Set up detached sent message
+    // 2. Snapshot previous toad bubble (if one is currently visible)
+    if (A.bubbleFrame > 0.02 || (A.targetTh > 0 && A.pendingReply)) {
+      A.oldTw = A.targetTw || 160;
+      A.oldTh = (A.targetTh || A.requestedTh || 110) * Math.max(0.2, A.bubbleFrame);
+      A.oldByStart = (A.anchorY || 100) - (A.oldTh * 0.64);
+      A.oldBy = A.oldByStart;
+      A.oldBx = TBUB_R - A.oldTw;
+    } else {
+      A.oldTh = 0;
+    }
+
+    // 3. Set up detached sent message DOM
     const sentMsgDom = document.getElementById('sentMessage');
     sentMsgDom.innerText = text;
 
     const canvasH = document.getElementById('canvasWrapper').clientHeight;
     const scaleY = canvasH / H;
 
-    // Measure at the SAME font size and column layout the bubble is rendered
-    // at — otherwise multi-line text is measured at the default font and the
-    // box ends up too short, clipping all but the first line(s).
     sentMsgDom.style.display = 'flex';
     sentMsgDom.style.flexDirection = 'column';
     sentMsgDom.style.justifyContent = 'center';
@@ -1401,8 +2141,11 @@ bottom: calc(4px + env(safe-area-inset-bottom));
     A.sentTh = A.sentRequestedTh;
 
     A.sentText = text;
-    A.sentBoxY = 170 - A.userTh;
+    A.sentBoxYStart = 168 - A.sentRequestedTh;
+    A.sentBoxY = A.sentBoxYStart;
+    A.swipeProgress = 0;
     A.chatState = 'SWIPING_UP';
+    A.pendingReply = null;
 
     uInput.value = '';
     uInput.dispatchEvent(new Event('input'));
@@ -1411,69 +2154,71 @@ bottom: calc(4px + env(safe-area-inset-bottom));
     window.chatHistory.push({ role: "user", parts: [{ text: text }] });
     recordMessage('user', text);
 
-    // Mobile: push exchange directly into the mobile chat log
+    // Mobile: push exchange directly into the mobile chat log (no premature "..." bubble)
     if (MQ.matches) {
       mobileAppend(text, 'user');
-      mobileThink = mobileAppend('...', 'toad');
     }
 
-    setTimeout(() => {
-      A.bubbleFrame = 0;
-      A.bubbleTarget = 0;
-      A.chatState = 'IDLE';
-
-      showText("..."); // Thinking state
-
-      /* Deploy-safe: the API key lives server-side in /api/chat (env var),
-         never in the browser. We only send the conversation; the proxy picks
-         the model (Gemini 3 Flash) and adds the system prompt, search tool
-         and safety settings. */
-      fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contents: window.chatHistory })
-      })
-      .then(res => res.json())
-      .then(data => {
-        if (data.error) {
-          showText(`Error: ${data.error}`);
-          recordMessage('model', `Error: ${data.error}`);
-          if (MQ.matches && mobileThink) {
-            const pinned = mobilePinnedBottom();
-            const toadEl = mobileThink;
-            toadEl.textContent = 'Error: ' + data.error;
-            mobileThink = null;
-            if (pinned) mobileScrollToTop(toadEl);
-          }
-          return;
+    /* Deploy-safe: the API key lives server-side in /api/chat (env var),
+       never in the browser. We only send the conversation; the proxy picks
+       the model (Gemini 3 Flash) and adds the system prompt, search tool
+       and safety settings. */
+    fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contents: window.chatHistory })
+    })
+    .then(async res => {
+      const cType = res.headers.get('content-type') || '';
+      if (!cType.includes('application/json')) {
+        if (res.status === 404) {
+          throw new Error('The /api/chat server is unreachable. Please run "node local-server.js" instead of a static server like "serve".');
         }
-        const replyText = data.reply || "Silence...";
-        window.chatHistory.push({ role: "model", parts: [{ text: replyText }] });
-        showText(replyText);
-        recordMessage('model', replyText);
-        // mobile: swap "..." with actual reply
-        if (MQ.matches && mobileThink) {
-          const pinned = mobilePinnedBottom();
-          const toadEl = mobileThink;
-          toadEl.innerHTML = '<div>' + formatMessage(replyText) + '</div>';
-          mobileThink = null;
-          if (pinned) mobileScrollToTop(toadEl);
+        const bodyPreview = await res.text();
+        throw new Error(`Server returned HTTP ${res.status}: ${bodyPreview.slice(0, 100)}`);
+      }
+      return res.json();
+    })
+    .then(data => {
+      if (data.error) {
+        const errText = `Error: ${data.error}`;
+        recordMessage('model', errText);
+        if (A.chatState === 'SWIPING_UP') {
+          A.pendingReply = errText;
+        } else {
+          A.thinking = false;
+          A.transPhase = 'CONDENSING';
+          A.transTimer = 0;
+          A.pendingReply = errText;
         }
-      })
-      .catch(err => {
-        const m = `The connection to the cosmos was interrupted: ${err.message}`;
-        showText(m);
-        recordMessage('model', m);
-        if (MQ.matches && mobileThink) {
-          const pinned = mobilePinnedBottom();
-          const toadEl = mobileThink;
-          toadEl.textContent = m;
-          mobileThink = null;
-          if (pinned) mobileScrollToTop(toadEl);
-        }
-      });
+        return;
+      }
+      const replyText = data.reply || "Silence...";
+      window.chatHistory.push({ role: "model", parts: [{ text: replyText }] });
+      recordMessage('model', replyText);
 
-    }, 700);
+      // Seamless transition to speech
+      if (A.chatState === 'SWIPING_UP') {
+        A.pendingReply = replyText;
+      } else {
+        A.thinking = false;
+        A.transPhase = 'CONDENSING';
+        A.transTimer = 0;
+        A.pendingReply = replyText;
+      }
+    })
+    .catch(err => {
+      const m = `The connection to the cosmos was interrupted: ${err.message}`;
+      recordMessage('model', m);
+      if (A.chatState === 'SWIPING_UP') {
+        A.pendingReply = m;
+      } else {
+        A.thinking = false;
+        A.transPhase = 'CONDENSING';
+        A.transTimer = 0;
+        A.pendingReply = m;
+      }
+    });
   }
 
   sendBtn.addEventListener('click', dispatchMessage);
