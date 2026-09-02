@@ -2,6 +2,8 @@
 
 A meditating toad sits in a moonlit grassy field under a starlit night sky. Talk to him — he's wise.
 
+**Try it live → [wise-toad.netlify.app](https://wise-toad.netlify.app)**
+
 ## What it is
 
 An animated pixel-art scene rendered to an HTML5 canvas with a chat interface. The toad replies with deep philosophical wisdom powered by Gemini AI with Google Search grounding.
