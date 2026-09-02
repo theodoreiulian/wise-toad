@@ -98,23 +98,21 @@
     }
 
     a.content-link {
-      display: inline-block;
-      margin-top: 8px;
-      margin-bottom: 8px;
-      margin-right: 8px;
-      background: #1d2a52;
-      border: 1px solid #46578f;
       color: #9fc0e8;
-      text-decoration: none;
-      padding: 4px 10px;
-      border-radius: 2px;
+      text-decoration: underline;
+      text-underline-offset: 3px;
+      text-decoration-thickness: 1px;
       cursor: pointer;
-      transition: all 0.2s;
+      display: inline;
+      background: transparent;
+      border: none;
+      padding: 0;
+      margin: 0;
+      transition: color 0.15s ease, text-decoration-color 0.15s ease;
     }
     a.content-link:hover {
-      background: #243366;
-      color: #bcd6f4;
-      border-color: #5a6ca8;
+      color: #d2e4ff;
+      text-decoration: underline;
     }
 
     /* inline bold inside replies */
@@ -301,6 +299,7 @@
       }
       .mobile-msg.toad {
         align-self: flex-end;
+        max-width: 90%;
         background: #16224a;
         border: 2px solid #33437a;
         animation: mobileToadEnter 0.52s steps(8, end) forwards;
@@ -335,12 +334,23 @@
         border-left: 6px solid #16224a;
         z-index: 1;
       }
-      .mobile-msg a { color: #9fc0e8; }
+      .mobile-msg a,
       .mobile-msg .content-link {
-        font-size: 16px;
-        padding: 3px 8px;
-        margin-top: 6px;
-        margin-bottom: 4px;
+        color: #9fc0e8;
+        text-decoration: underline;
+        text-underline-offset: 3px;
+        text-decoration-thickness: 1px;
+        font-size: inherit;
+        padding: 0;
+        margin: 0;
+        background: transparent;
+        border: none;
+        display: inline;
+        transition: color 0.15s ease;
+      }
+      .mobile-msg a:hover,
+      .mobile-msg .content-link:hover {
+        color: #d2e4ff;
       }
 
       /* input sits at bottom-left, to the left of the toad. Its background is
@@ -614,7 +624,8 @@
      (= S.toad.x - 15, mirroring the original 170-vs-185 gap). On mobile these
      canvas bubbles aren't drawn, so this only affects desktop. */
   const TBUB_R = 210;
-  const THIST_X = TBUB_R - 160;   // toad history box left edge (boxes are 160 wide)
+  const TOAD_BW = 185;            // toad bubble width (balanced at 185, left edge x=25)
+  const THIST_X = TBUB_R - TOAD_BW; // toad history box left edge
 
   /* =================================================================
      DETERMINISTIC RANDOM
@@ -668,7 +679,7 @@
     pendingReply: null,
     toadAwake: 0,        // 0 (closed) -> 1 (enlightened eyes open)
     mouthSpark: 0,       // 0 or 1 inspiration puff at mouth
-    targetTw: 140, targetTh: 110, requestedTh: 110, calcUTh: 12,
+    targetTw: TOAD_BW, targetTh: 110, requestedTh: 110, calcUTh: 12,
     scaleY: 1, scroll: 0, scrollTarget: 0, maxScroll: 0
   };
   window.A = A;
@@ -1545,7 +1556,7 @@
       const textOverflows = A.requestedTh > A.targetTh + 0.5;
       bText.style.justifyContent = textOverflows ? 'flex-start' : 'center';
 
-      const tw = A.targetTw || 160, th = A.targetTh;
+      const tw = A.targetTw || TOAD_BW, th = A.targetTh;
       const f = A.bubbleFrame;
       const w = Math.round(tw * Math.min(1.02, f));
       const h = Math.round(th * Math.min(1.02, f));
@@ -1741,7 +1752,7 @@
     } else {
       if(A.bubbleFrame === 0) return;
       f = A.bubbleFrame;
-      tw = A.targetTw || 160;
+      tw = A.targetTw || TOAD_BW;
       th = A.targetTh || 110;
       const w = Math.round(tw * Math.min(1.02, f));
       const h = Math.round(th * Math.min(1.02, f));
@@ -1992,7 +2003,7 @@
     let safe = escapeHTML(text);
     // Strip all newlines so the text flows perfectly smoothly as one continuous block
     safe = safe.replace(/\n+/g, ' ');
-    safe = safe.replace(/\[([^\]]+)\]\((https?:\/\/[^\)]+)\)/g, '<a class="content-link" href="$2" target="_blank">$1</a>');
+    safe = safe.replace(/\[([^\]]+)\]\((https?:\/\/[^\)]+)\)/g, '<a class="content-link" href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
     safe = safe.replace(/\*+([^\*]+)\*+/g, '<strong class="md-b">$1</strong>');
     return safe;
   }
@@ -2013,7 +2024,7 @@
     bText.style.paddingTop = '';   // measure pure text height (drop any prior overflow padding)
     bText.style.width = 'fit-content';
     bText.style.height = 'fit-content';
-    bText.style.maxWidth = ((160 / W) * 100) + '%';
+    bText.style.maxWidth = ((TOAD_BW / W) * 100) + '%';
 
     const wrapperH = document.getElementById('canvasWrapper').clientHeight;
     const scaleY = wrapperH / H;
@@ -2028,7 +2039,7 @@
 
     bText.style.display = 'none';
 
-    A.targetTw = 160; // Always matching user bubble width
+    A.targetTw = TOAD_BW;
     A.requestedTh = Math.max(12, calcTh + 4);
     A.bubbleTarget = 1;
     A.bubbleProgress = 0;
@@ -2112,7 +2123,7 @@
 
     // 2. Snapshot previous toad bubble (if one is currently visible)
     if (A.bubbleFrame > 0.02 || (A.targetTh > 0 && A.pendingReply)) {
-      A.oldTw = A.targetTw || 160;
+      A.oldTw = A.targetTw || TOAD_BW;
       A.oldTh = (A.targetTh || A.requestedTh || 110) * Math.max(0.2, A.bubbleFrame);
       A.oldByStart = (A.anchorY || 100) - (A.oldTh * 0.64);
       A.oldBy = A.oldByStart;
@@ -2252,7 +2263,7 @@
     if (role === 'user') el.textContent = text;
     else el.innerHTML = '<div>' + formatMessage(text) + '</div>';
     el.style.left   = (((role === 'user' ? 10 : THIST_X) / W) * 100) + '%';
-    el.style.width  = ((160 / W) * 100) + '%';
+    el.style.width  = (((role === 'user' ? 160 : TOAD_BW) / W) * 100) + '%';
     el.style.height = 'auto';
     el.style.display = 'flex';
     el.style.fontSize = (6.5 * (A.scaleY || 1)) + 'px';
@@ -2322,7 +2333,8 @@
       const fill   = m.role === 'user' ? TH.ubFill : TH.tbFill;
       const border = m.role === 'user' ? TH.ubBorder : TH.tbBorder;
       const hx     = m.role === 'user' ? 10 : THIST_X;
-      drawHistBox(hx, Math.round(m._y + A.scroll), 160, Math.round(m.h), fill, border);
+      const hw     = m.role === 'user' ? 160 : TOAD_BW;
+      drawHistBox(hx, Math.round(m._y + A.scroll), hw, Math.round(m.h), fill, border);
     }
   }
 

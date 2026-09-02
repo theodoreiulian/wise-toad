@@ -122,7 +122,8 @@ and the scene executes a **frame-driven synchronized dual-scroll animation** (`A
 
 Bubble layout in `update()` enforces physics rules — the sent message **never** gets squashed; instead the toad
 bubble is height-limited or the toad is pushed down to avoid overlap — and the articulated tail is wired to the
-toad's mouth at a fixed `y = 100`. Touch these constants carefully.
+toad's mouth at a fixed `y = 100`. The toad's dialogue bubble width is defined by `TOAD_BW = 185` anchored to
+`TBUB_R = 210`, spanning left to `x = 25` to provide generous reading width while preserving conversational stagger. Touch these constants carefully.
 
 **Only the latest exchange is ever shown live** — each send clears the previous one. A separate,
 purely additive **scroll-back system** reuses the same box format for reading past exchanges (see
