@@ -119,13 +119,15 @@
     .md-b { color: #e6c468; }
 
     /* =====================================================================
-       MOBILE LAYOUT  (portrait phones — toad small at bottom-right,
-       input to its left, chat fills the space above)
+       MOBILE LAYOUT (portrait phones / mobile widths: big centered toad,
+       input at bottom, user message sent to top, response below it with
+       full-screen overflow scroll)
        ===================================================================== */
-    #mobile-chat,
-    #toadCorner,
+    #mobileDialogue,
+    #toadMobile,
     #sceneTop,
-    #inputBubbleBg, #toadCorner, #mobileThought {
+    #inputBubbleBg,
+    #inputBubbleBorder {
       display: none;
     }
 
@@ -135,9 +137,6 @@
         overflow: hidden;
       }
 
-      /* the whole scene fills the screen as the backdrop. The sky-blue background
-         is insurance: if the two stacked canvases ever leave a sub-pixel gap at
-         their join, sky (not black) shows through. */
       #canvasWrapper {
         position: fixed !important;
         inset: 0 !important;
@@ -147,195 +146,190 @@
         height: 100vh !important;
         z-index: 0;
         overflow: hidden !important;
-        background: #101234;         /* seam insurance; JS sets the live SKY_MID inline */
+        background: #101234;
       }
-      /* Show the left portion of the field (≈ grid x:0–165) across the full width,
-         anchored to the BOTTOM so the field fills the lower screen and the corner
-         toad sits grounded on the grass. */
+
+      /* Scene canvas centered horizontally, horizon resting around 44vh from bottom */
       canvas#scene {
         position: absolute;
         bottom: 0;
-        left: 0;
-        width: 194vw !important;     /* 320/165 ≈ 1.94 → grid x:0–165 across the screen */
-        height: auto !important;     /* keeps the 16:9 ratio (≈109vw tall) */
+        left: 50%;
+        transform: translateX(-50%);
+        height: 95vh !important;
+        width: calc(95vh * 320 / 180) !important;
+        image-rendering: pixelated;
       }
-      /* the sky, stacked on top of #scene to fill the rest of the screen.
-         bottom = #scene's rendered height (194vw × 180/320 = 194vw × 0.5625) minus
-         2px so the two canvases OVERLAP slightly (no gap line). Keep 194vw in sync. */
+
+      /* Sky continuing upward seamlessly above #scene */
       #sceneTop {
         display: block;
         position: absolute;
-        left: 0;
-        bottom: calc(194vw * 0.5625 - 2px);
-        width: 194vw;
-        height: auto;
+        left: 50%;
+        transform: translateX(-50%);
+        bottom: calc(95vh - 2px);
+        height: 95vh;
+        width: calc(95vh * 320 / 180);
         image-rendering: pixelated;
         z-index: 0;
       }
 
-      /* ONLY the toad — its own small canvas, bottom-right corner */
-      #toadCorner {
+      /* Big centered Toad stage (Toad in lotus pose, breathing, thoughts & awakenings) */
+      #toadMobile {
         display: block;
         position: fixed;
-        right: 4px;
-        bottom: calc(4px + env(safe-area-inset-bottom));
-        width: 84px;
-        height: 98px;
-        z-index: 3;
+        left: 50%;
+        top: 53%;
+        transform: translate(-50%, -50%);
+        width: min(88vw, 360px);
+        height: auto;
+        z-index: 2;
         image-rendering: pixelated;
         pointer-events: none;
       }
 
-      /* Mobile thought cloud: floating high in the starry sky, well clear of chat */
-      #mobileThought {
+      /* Mobile Dialogue Overlay */
+      #mobileDialogue {
         display: block;
         position: fixed;
-        top: 24%;
-        right: 20px;
-        width: 140px;
-        height: 72px;
-        z-index: 1;
-        image-rendering: pixelated;
+        inset: 0;
         pointer-events: none;
+        z-index: 4;
       }
 
-      /* chat fills everything above the bottom strip (toad + input) */
-      #mobile-chat {
-        display: flex;
-        position: fixed;
-        top: env(safe-area-inset-top);
+      /* User Message: thought cloud at top of screen */
+      #mobileUserMsg {
+        display: none;
+        position: absolute;
+        top: calc(14px + env(safe-area-inset-top));
         left: 0;
         right: 0;
-        bottom: calc(108px + env(safe-area-inset-bottom));
-        flex-direction: column;
-        overflow-y: auto;
-        -webkit-overflow-scrolling: touch;
-        padding: 12px 12px 4px;
-        gap: 0;
+        margin: 0 auto;
+        width: fit-content;
+        min-width: 160px;
+        max-width: calc(100% - 28px);
+        box-sizing: border-box;
+        pointer-events: auto;
+        transition: transform 0.45s cubic-bezier(0.2, 0.9, 0.3, 1), opacity 0.35s ease;
+        z-index: 5;
+        filter: drop-shadow(0 4px 18px rgba(4, 6, 20, 0.55));
+      }
+
+      #mobileUserBg,
+      #mobileToadBg {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        z-index: 0;
+        image-rendering: pixelated;
+        image-rendering: -moz-crisp-edges;
+        image-rendering: crisp-edges;
+      }
+
+      #mobileUserContent {
+        position: relative;
         z-index: 1;
-      }
-
-      .mobile-exchange {
-        display: flex;
-        flex-direction: column;
-        gap: 16px;
-        margin-bottom: 14px;
-        animation: mobileExchangeEnter 0.45s ease-out;
-      }
-      /* Pins the whole stack to the bottom of the scroll area when the
-         conversation is short (newest near the input), yet collapses to 0 so
-         scrolling still works once messages overflow upward. */
-      .mobile-exchange:first-child { margin-top: auto; }
-
-      @keyframes mobileExchangeEnter {
-        from { opacity: 0.3; transform: translateY(16px); }
-        to   { opacity: 1; transform: translateY(0); }
-      }
-
-      .mobile-msg {
-        max-width: 88%;
-        padding: 5px 16px;
         color: #dde4ff;
         font-family: 'VT323', monospace;
-        line-height: 1.25;
-        font-size: 19px;
-        word-wrap: break-word;
+        font-size: 20px;
+        line-height: 1.15;
+        padding: 10px 18px;
+        word-break: break-word;
         white-space: pre-wrap;
-        text-shadow: none;
-        position: relative;
+        box-sizing: border-box;
+        text-align: center;
       }
 
-      .mobile-msg.user {
-        align-self: flex-start;
-        max-width: calc(100% - 94px);
-        background: #1c2950;
-        border: 2px solid #3a4c86;
-        animation: mobileUserEnter 0.48s steps(8, end) forwards;
+      #mobileUserMsg.entering {
+        animation: mobileUserGlideUp 0.82s cubic-bezier(0.33, 0.05, 0.22, 1) forwards;
       }
-      @keyframes mobileUserEnter {
+
+      @keyframes mobileUserGlideUp {
         0% {
           opacity: 0;
-          transform: translateY(18px) scale(0.95);
-          border-color: #829fd8;
+          transform: translateY(calc(100vh - 120px)) scale(0.75);
+          filter: drop-shadow(0 0 22px rgba(130, 159, 216, 0.85));
         }
-        35% {
-          opacity: 0.75;
-          transform: translateY(8px) scale(0.98);
-          border-color: #6b85c8;
+        25% {
+          opacity: 1;
+          filter: drop-shadow(0 0 16px rgba(130, 159, 216, 0.65));
         }
         75% {
-          opacity: 1;
-          transform: translateY(-2px) scale(1.015);
-          border-color: #5c74b2;
+          transform: translateY(-3px);
+          filter: drop-shadow(0 2px 10px rgba(92, 116, 178, 0.4));
         }
         100% {
           opacity: 1;
           transform: translateY(0) scale(1);
-          border-color: #3a4c86;
+          filter: drop-shadow(0 4px 18px rgba(4, 6, 20, 0.55));
         }
       }
-      .mobile-msg.user::after {
-        content: '';
+
+      /* Toad Response: thought cloud popping up from its thinking bubble */
+      #mobileToadMsg {
+        display: none;
         position: absolute;
-        bottom: 6px;
-        left: -8px;
-        width: 0;
-        height: 0;
-        border-top: 6px solid transparent;
-        border-bottom: 6px solid transparent;
-        border-right: 8px solid #3a4c86;
+        left: 14px;
+        right: 14px;
+        pointer-events: auto;
+        z-index: 6;
+        transform-origin: 50% 100%;
+        filter: drop-shadow(0 4px 20px rgba(4, 6, 20, 0.55));
+        transition: top 0.45s cubic-bezier(0.2, 0.9, 0.3, 1),
+                    bottom 0.45s cubic-bezier(0.2, 0.9, 0.3, 1),
+                    height 0.45s cubic-bezier(0.2, 0.9, 0.3, 1),
+                    max-height 0.45s cubic-bezier(0.2, 0.9, 0.3, 1);
       }
-      .mobile-msg.user::before {
-        content: '';
-        position: absolute;
-        bottom: 8px;
-        left: -5px;
-        width: 0;
-        height: 0;
-        border-top: 4px solid transparent;
-        border-bottom: 4px solid transparent;
-        border-right: 6px solid #1c2950;
+
+      #mobileToadMsg.entering {
+        animation: mobileThoughtPop 0.52s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      }
+
+      @keyframes mobileThoughtPop {
+        0% {
+          opacity: 0;
+          transform: scale(0.28) translateY(28px);
+          filter: drop-shadow(0 0 24px rgba(160, 216, 239, 0.95));
+        }
+        35% {
+          opacity: 1;
+          transform: scale(0.74) translateY(10px);
+          filter: drop-shadow(0 0 16px rgba(120, 160, 208, 0.65));
+        }
+        70% {
+          transform: scale(1.035) translateY(-3px);
+          filter: drop-shadow(0 2px 10px rgba(92, 116, 178, 0.4));
+        }
+        100% {
+          opacity: 1;
+          transform: scale(1.0) translateY(0);
+          filter: drop-shadow(0 4px 20px rgba(4, 6, 20, 0.55));
+        }
+      }
+
+      #mobileToadContent {
+        position: relative;
         z-index: 1;
+        color: #dde4ff;
+        font-family: 'VT323', monospace;
+        font-size: 20px;
+        line-height: 1.15;
+        padding: 14px 20px;
+        word-break: break-word;
+        white-space: pre-wrap;
+        box-sizing: border-box;
+        max-height: 100%;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
       }
-      .mobile-msg.toad {
-        align-self: flex-end;
-        max-width: 90%;
-        background: #16224a;
-        border: 2px solid #33437a;
-        animation: mobileToadEnter 0.52s steps(8, end) forwards;
+      #mobileToadContent::-webkit-scrollbar {
+        display: none;
       }
-      @keyframes mobileToadEnter {
-        0%   { opacity: 0; transform: translateY(18px) scale(0.65); border-color: #829fd8; }
-        25%  { opacity: 0.45; transform: translateY(10px) scaleX(0.85) scaleY(0.75); border-color: #829fd8; }
-        50%  { opacity: 0.75; transform: translateY(4px) scaleX(0.96) scaleY(0.92); border-color: #5c74b2; }
-        75%  { opacity: 0.95; transform: translateY(-2px) scaleX(1.02) scaleY(1.02); border-color: #445995; }
-        100% { opacity: 1; transform: translateY(0) scale(1.0); border-color: #33437a; }
-      }
-      .mobile-msg.toad::after {
-        content: '';
-        position: absolute;
-        bottom: 6px;
-        right: -8px;
-        width: 0;
-        height: 0;
-        border-top: 6px solid transparent;
-        border-bottom: 6px solid transparent;
-        border-left: 8px solid #33437a;
-      }
-      .mobile-msg.toad::before {
-        content: '';
-        position: absolute;
-        bottom: 8px;
-        right: -5px;
-        width: 0;
-        height: 0;
-        border-top: 4px solid transparent;
-        border-bottom: 4px solid transparent;
-        border-left: 6px solid #16224a;
-        z-index: 1;
-      }
-      .mobile-msg a,
-      .mobile-msg .content-link {
+
+      #mobileToadMsg a,
+      #mobileToadMsg .content-link {
         color: #9fc0e8;
         text-decoration: underline;
         text-underline-offset: 3px;
@@ -348,58 +342,106 @@
         display: inline;
         transition: color 0.15s ease;
       }
-      .mobile-msg a:hover,
-      .mobile-msg .content-link:hover {
+      #mobileToadMsg a:hover,
+      #mobileToadMsg .content-link:hover {
         color: #d2e4ff;
       }
 
-      /* input sits at bottom-left, to the left of the toad. Its background is
-         transparent: the pixel-art rounded bubble behind it (#inputBubbleBg)
-         provides the same stepped-corner shape as the desktop canvas bubble. */
+      /* Long response: Full-Screen mode (moves user message up out of screen) */
+      #mobileDialogue.is-fullscreen #mobileUserMsg {
+        transform: translateY(calc(-100% - 40px));
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      #mobileDialogue.is-fullscreen #mobileToadMsg {
+        top: calc(14px + env(safe-area-inset-top)) !important;
+        bottom: calc(72px + env(safe-area-inset-bottom)) !important;
+        height: auto !important;
+        max-height: calc(100vh - 86px - env(safe-area-inset-top) - env(safe-area-inset-bottom)) !important;
+        display: flex !important;
+        flex-direction: column;
+      }
+
+      #mobileDialogue.is-fullscreen #mobileToadFrame {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+      }
+
+      #mobileDialogue.is-fullscreen #mobileToadContent {
+        flex: 1;
+        overflow-y: auto;
+        min-height: 0;
+      }
+
+      #mobileDialogue.is-fullscreen #mobileDynamicTail {
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      /* Text input box: at the bottom of the screen */
       #userInput {
         position: fixed !important;
-        bottom: calc(30px + env(safe-area-inset-bottom));
-        left: 8px;
-        right: 124px;
-        width: auto !important;
-        height: 44px !important;
+        bottom: calc(16px + env(safe-area-inset-bottom));
+        left: 14px;
+        right: 14px;
+        width: calc(100% - 28px) !important;
+        height: 46px !important;
         top: auto !important;
         background: transparent;
         border: none;
         border-radius: 0;
-        z-index: 2;
+        z-index: 5;
         font-size: 20px !important;
-        padding: 8px 36px 8px 12px;
+        padding: 10px 48px 10px 14px;
+        clip-path: inset(0 0 0 0);
       }
 
-      /* Pixel-art rounded input bubble — drawn on a tiny 64×10 canvas
-         with the same blocky-corner primitives as the desktop bubble,
-         then scaled up via image-rendering: pixelated. No anti-aliasing. */
       #inputBubbleBg {
         display: block;
         position: fixed;
-        bottom: calc(30px + env(safe-area-inset-bottom));
-        left: 8px;
-        right: 124px;
-        height: 44px;
-        z-index: 1;
+        bottom: calc(16px + env(safe-area-inset-bottom));
+        left: 14px;
+        right: 14px;
+        width: calc(100% - 28px) !important;
+        height: 46px;
+        z-index: 4;
         pointer-events: none;
         image-rendering: pixelated;
+        image-rendering: -moz-crisp-edges;
+        image-rendering: crisp-edges;
+      }
+
+      #inputBubbleBorder {
+        display: block;
+        position: fixed;
+        bottom: calc(16px + env(safe-area-inset-bottom));
+        left: 14px;
+        right: 14px;
+        width: calc(100% - 28px) !important;
+        height: 46px;
+        z-index: 6;
+        pointer-events: none;
+        image-rendering: pixelated;
+        image-rendering: -moz-crisp-edges;
+        image-rendering: crisp-edges;
       }
 
       #sendBtn {
         position: fixed !important;
-        bottom: calc(30px + env(safe-area-inset-bottom));
-        right: 98px;
-        width: 30px !important;
-        height: 44px !important;
+        bottom: calc(16px + env(safe-area-inset-bottom));
+        right: 22px;
+        width: 36px !important;
+        height: 46px !important;
         top: auto !important;
         left: auto !important;
-        z-index: 2;
-        font-size: 18px !important;
+        z-index: 7;
+        font-size: 20px !important;
       }
 
-      /* hide the desktop overlays */
+      /* Hide desktop overlays */
       #bubbleText, #sentMessage, #oldSentMessage, #histLayer {
         display: none !important;
       }
@@ -415,12 +457,21 @@
   <div id="oldSentMessage"></div>
   <canvas id="inputBubbleBg" width="64" height="10"></canvas>
   <textarea id="userInput" placeholder="Speak to the Toad"></textarea>
+  <canvas id="inputBubbleBorder" width="64" height="10"></canvas>
   <div id="sendBtn" title="Send">&gt;</div>
   <div id="histLayer"></div>
 </div>
-<div id="mobile-chat"></div>
-<canvas id="mobileThought" width="70" height="36"></canvas>
-<canvas id="toadCorner" width="84" height="98"></canvas>
+<canvas id="toadMobile" width="96" height="156"></canvas>
+<div id="mobileDialogue">
+  <div id="mobileUserMsg" style="display: none;">
+    <canvas id="mobileUserBg"></canvas>
+    <div id="mobileUserContent"></div>
+  </div>
+  <div id="mobileToadMsg" style="display: none;">
+    <canvas id="mobileToadBg"></canvas>
+    <div id="mobileToadContent"></div>
+  </div>
+</div>
 <script>
 (() => {
   'use strict';
@@ -429,87 +480,219 @@
      CANVAS SETUP
      ================================================================= */
   const C = document.getElementById('scene');
-  let G = C.getContext('2d');           // `let`: swapped to the toad-corner ctx below
+  let G = C.getContext('2d');           // `let`: swapped to toad contexts
   const W = 320, H = 180;
   C.width = W; C.height = H;
   G.imageSmoothingEnabled = false;
 
-  /* Mobile (portrait): the room renders fullscreen here, and the toad alone is
-     re-rendered onto a small bottom-right canvas. Same media query as the CSS. */
+  /* Mobile (portrait): The room renders fullscreen backdrop, and the Toad
+     with swaying grass and cosmic thought cloud is rendered onto #toadMobile (96x156). */
   const MQ = window.matchMedia('(max-width: 768px) and (orientation: portrait)');
-  const TC = document.getElementById('toadCorner');
-  const GT = TC.getContext('2d');
-  GT.imageSmoothingEnabled = false;
-  /* translate so the toad's bounding box lands comfortably in the corner canvas */
-  const TOAD_OX = 218, TOAD_OY = 69;   // centered & grounded on bottom grass
-  function renderToadCorner(){
-    GT.setTransform(1,0,0,1,0,0);
-    GT.clearRect(0,0,TC.width,TC.height);
-    GT.setTransform(1,0,0,1,-TOAD_OX,-TOAD_OY);
-    const prev = G; G = GT;   // primitives (rv/d/…) draw to whatever G points at
+  const TM = document.getElementById('toadMobile');
+  const GTM = TM.getContext('2d');
+  GTM.imageSmoothingEnabled = false;
+
+  function renderMobileToad() {
+    GTM.setTransform(1, 0, 0, 1, 0, 0);
+    GTM.clearRect(0, 0, TM.width, TM.height);
+
+    // 1. Draw Toad centered in 96x156 canvas:
+    // Grounded at y=148, toad head at y=60, toad visual center at x=48.
+    // Since S.toad = (225, 72) with visual center at tx+35 = 260, offset (-212, -12) places center exactly at x=48:
+    GTM.setTransform(1, 0, 0, 1, -212, -12);
+    const prev = G; G = GTM;
     drawToad();
+
+    // Reset transform for drawing foreground grass, connector orbs, and thought cloud
+    GTM.setTransform(1, 0, 0, 1, 0, 0);
+
+    // 2. Foreground grass blades swaying in front of the toad's lap
+    const tufts = [
+      { x: 26, y: 148, h: 9, phase: 0.5, n: 3, ci: 0 },
+      { x: 48, y: 150, h: 12, phase: 1.8, n: 4, ci: 2 },
+      { x: 70, y: 148, h: 10, phase: 3.2, n: 3, ci: 1 }
+    ];
+    tufts.forEach(tuft);
+
+    // 3. Thought animation (connector orbs, cloud, condensation, streaming)
+    drawMobileThoughtOnStage();
+
     G = prev;
   }
 
-  /* Mobile: floating thought cloud canvas positioned high in the starry sky */
-  const MTC = document.getElementById('mobileThought');
-  const GMT = MTC.getContext('2d');
-  GMT.imageSmoothingEnabled = false;
-  function renderMobileThought(){
-    GMT.clearRect(0, 0, MTC.width, MTC.height);
+  function drawMobileThoughtOnStage() {
     if (!A.thinking && A.transPhase === 'IDLE') return;
-    if (A.transPhase === 'BLOOMING' || A.transPhase === 'SETTLING') return;
 
+    const t = A.thinkTime;
+    const floatY = (A.transPhase === 'IDLE') ? ((Math.sin(t * 1.5) * 1.2)|0) : 0;
+    const step4 = (t * 4)|0;
+    const step6 = (t * 6)|0;
+
+    // During BLOOMING, the thought cloud dissolves upward into the popping message
+    if (A.transPhase === 'BLOOMING') {
+      const bp = Math.min(1, A.transTimer / 0.52);
+      const fadeScale = Math.max(0, 0.45 * (1 - bp));
+      if (fadeScale > 0.02) {
+        drawThoughtCloud(15, 8 - ((bp * 10)|0), t, fadeScale, 1.0 - bp, false);
+      }
+      // Rising starlight dissipation sparks ascending into the popping message box
+      for (let i = 0; i < 5; i++) {
+        const sx = 48 + ((Math.sin(t * 14 + i * 2.3) * (12 + i * 4))|0);
+        const sy = ((16 - bp * 24 + i * 3)|0);
+        if (sy >= 0 && sy <= 40) {
+          d(sx, sy, (i % 2 === 0) ? '#ffffff' : ((i % 3 === 0) ? '#e6c468' : '#a0d8ef'));
+        }
+      }
+      return;
+    }
+    if (A.transPhase === 'SETTLING') return;
+
+    const isIntro = (A.thinking && A.thinkIntro < 1.0);
     let scale = 1.0;
     let coreFlash = 0;
-    let isIntro = false;
+    let streamProg = -1;
 
-    if (A.thinking && A.thinkIntro < 1.0) {
-      isIntro = true;
-      // Cloud blooms in the sky after third-eye activates on corner toad
-      const cloudIntroP = (A.thinkIntro - 0.20) / 0.75;
-      if (cloudIntroP <= 0) return; // wait for third eye to flare first
-      const p = Math.min(1.0, cloudIntroP);
-      if (p < 0.15) {
-        scale = 0.18; coreFlash = 0.9;
-      } else if (p < 0.35) {
-        scale = 0.42; coreFlash = 0.5;
-      } else if (p < 0.55) {
-        scale = 0.70; coreFlash = 0.2;
-      } else if (p < 0.75) {
-        scale = 0.90; coreFlash = 0.05;
-      } else if (p < 0.90) {
-        scale = 1.035; coreFlash = 0;
+    if (isIntro) {
+      const p = A.thinkIntro;
+      if (p < 0.38) {
+        scale = 0;
       } else {
-        scale = 1.00; coreFlash = 0;
+        const cp = (p - 0.38) / 0.62;
+        if (cp < 0.15) {
+          scale = 0.18;
+          coreFlash = 0.9;
+        } else if (cp < 0.35) {
+          scale = 0.42;
+          coreFlash = 0.5;
+        } else if (cp < 0.55) {
+          scale = 0.70;
+          coreFlash = 0.2;
+        } else if (cp < 0.75) {
+          scale = 0.90;
+          coreFlash = 0.05;
+        } else if (cp < 0.90) {
+          scale = 1.035;
+          coreFlash = 0;
+        } else {
+          scale = 1.00;
+          coreFlash = 0;
+        }
       }
     } else if (A.transPhase === 'CONDENSING') {
       const cp = Math.min(1, A.transTimer / 0.38);
-      scale = Math.max(0.20, 1.0 - 0.80 * cp);
+      scale = Math.max(0.35, 1.0 - 0.55 * cp);
       coreFlash = Math.sin(cp * Math.PI);
     } else if (A.transPhase === 'STREAMING') {
-      const sp = Math.min(1, A.transTimer / 0.32);
-      scale = Math.max(0, 0.20 * (1 - sp));
-      coreFlash = 0.5 * (1 - sp);
+      scale = 0.40;
+      streamProg = Math.min(1, A.transTimer / 0.32);
+      coreFlash = 0.8;
     }
 
-    const prev = G; G = GMT;
-    const floatY = (A.transPhase === 'IDLE') ? ((Math.sin(A.thinkTime * 1.5) * 1.2)|0) : 0;
-    drawThoughtCloud(2, 3 + floatY, A.thinkTime, scale, coreFlash, isIntro);
-    G = prev;
+    // Connector orbs rising from toad temple (x=48, y=64) up toward cloud center (cx=15, cy=8, so cloud base is y=36)
+    // Orb 1: near toad head
+    const o1x = (47 + (Math.cos(t * 2.0) * 0.8)|0);
+    const o1y = (54 + (Math.sin(t * 2.5) * 1.0)|0);
+    if (!isIntro || A.thinkIntro >= 0.12) {
+      if (isIntro && A.thinkIntro < 0.22) {
+        d(o1x+1, o1y+1, '#ffffff');
+      } else {
+        const o1Glow = (streamProg >= 0.65);
+        if (o1Glow) {
+          rv(o1x-1, o1y-1, 5, 5, '#ffffff');
+          d(o1x, o1y, '#e6c468');
+        } else {
+          rv(o1x, o1y, 3, 3, '#16224a');
+          rv(o1x, o1y, 3, 1, '#33437a');
+          rv(o1x, o1y+2, 3, 1, '#33437a');
+          d(o1x+1, o1y+1, (step4 % 2 === 0) ? '#78a0d0' : '#a0d8ef');
+        }
+      }
+    }
+
+    // Orb 2: midway
+    const o2x = (48 + (Math.cos(t * 1.8 + 1.0) * 1.0)|0);
+    const o2y = (44 + (Math.sin(t * 2.2 + 1.2) * 1.0)|0);
+    if (!isIntro || A.thinkIntro >= 0.24) {
+      if (isIntro && A.thinkIntro < 0.35) {
+        rv(o2x+1, o2y+1, 3, 3, '#ffffff');
+      } else {
+        const o2Glow = (streamProg >= 0.30 && streamProg < 0.70);
+        if (o2Glow) {
+          rv(o2x-1, o2y-1, 7, 7, '#ffffff');
+          rv(o2x, o2y, 5, 5, '#e6c468');
+          d(o2x+2, o2y+2, '#ffffff');
+        } else {
+          rv(o2x+1, o2y, 3, 5, '#16224a');
+          rv(o2x, o2y+1, 5, 3, '#16224a');
+          rv(o2x+1, o2y, 3, 1, '#33437a');
+          rv(o2x+1, o2y+4, 3, 1, '#33437a');
+          rv(o2x, o2y+1, 1, 3, '#33437a');
+          rv(o2x+4, o2y+1, 1, 3, '#33437a');
+          d(o2x+1, o2y+1, '#78a0d0');
+          if ((step6 + 1) % 3 === 0) d(o2x+2, o2y+2, '#e6c468');
+        }
+      }
+    }
+
+    // Orb 3: near cloud base
+    const o3x = (48 + (Math.cos(t * 1.6 + 2.0) * 1.2)|0);
+    const o3y = (34 + (Math.sin(t * 2.0 + 2.0) * 1.0)|0);
+    if (!isIntro || A.thinkIntro >= 0.36) {
+      if (isIntro && A.thinkIntro < 0.48) {
+        rv(o3x+2, o3y+2, 3, 3, '#ffffff');
+      } else {
+        const o3Glow = (streamProg >= 0.0 && streamProg < 0.40);
+        if (o3Glow) {
+          rv(o3x-1, o3y-1, 9, 9, '#ffffff');
+          rv(o3x, o3y, 7, 7, '#e6c468');
+          d(o3x+3, o3y+3, '#ffffff');
+        } else {
+          rv(o3x+1, o3y, 5, 7, '#16224a');
+          rv(o3x, o3y+1, 7, 5, '#16224a');
+          rv(o3x+1, o3y, 5, 1, '#33437a');
+          rv(o3x+1, o3y+6, 5, 1, '#33437a');
+          rv(o3x, o3y+1, 1, 5, '#33437a');
+          rv(o3x+6, o3y+1, 1, 5, '#33437a');
+          d(o3x+2, o3y+2, '#78a0d0');
+          d(o3x+3, o3y+2, '#a0d8ef');
+        }
+      }
+    }
+
+    // Upward starlight sparks ascending out of thought cloud toward popping message
+    if (streamProg >= 0.20) {
+      const spFrac = (streamProg - 0.20) / 0.80;
+      const sparkY = (24 - spFrac * 22)|0;
+      d(48, sparkY, '#ffffff');
+      d(47, sparkY + 1, '#a0d8ef'); d(49, sparkY + 1, '#a0d8ef');
+      d(48, sparkY + 2, '#e6c468');
+    }
+
+    // Draw cosmic thought cloud
+    if (scale > 0) {
+      drawThoughtCloud(15, 8 + floatY, t, scale, coreFlash, isIntro);
+    }
   }
 
   /* Mobile: pixel-art rounded input bubble — same blocky-corner pattern as
      drawUserBubble, drawn on a tiny canvas (64×10 internal) and scaled up by
      CSS with image-rendering: pixelated. No anti-aliasing = authentic pixel look. */
   const IB = document.getElementById('inputBubbleBg');
-  const GI = IB.getContext('2d');
-  GI.imageSmoothingEnabled = false;
+  const GI = IB ? IB.getContext('2d') : null;
+  if (GI) GI.imageSmoothingEnabled = false;
+
+  const IBB = document.getElementById('inputBubbleBorder');
+  const GIB = IBB ? IBB.getContext('2d') : null;
+  if (GIB) GIB.imageSmoothingEnabled = false;
+
   function drawInputBubble(){
+    if (!IB || !GI) return;
     const fill = TH.ubFill, border = TH.ubBorder;
     const w = IB.width, h = IB.height;
+
+    // 1. Background fill on IB (behind #userInput, z-index: 4)
     GI.clearRect(0,0,w,h);
-    const prev = G; G = GI;
+    let prev = G; G = GI;
     rv(2,0,w-4,h,fill);
     rv(0,2,w,h-4,fill);
     rv(1,1,w-2,h-2,fill);
@@ -519,6 +702,18 @@
     d(w-2,0,border); d(w-1,1,border);
     d(1,h-1,border); d(0,h-2,border);
     d(w-2,h-1,border); d(w-1,h-2,border);
+
+    // 2. Opaque border frame on IBB (in front of #userInput, z-index: 6, pointer-events: none)
+    if (IBB && GIB) {
+      GIB.clearRect(0,0,w,h);
+      G = GIB;
+      rv(2,0,w-4,1,border); rv(2,h-1,w-4,1,border);
+      rv(0,2,1,h-4,border); rv(w-1,2,1,h-4,border);
+      d(1,0,border); d(0,1,border);
+      d(w-2,0,border); d(w-1,1,border);
+      d(1,h-1,border); d(0,h-2,border);
+      d(w-2,h-1,border); d(w-1,h-2,border);
+    }
     G = prev;
   }
 
@@ -986,7 +1181,7 @@
     rv(tx+25,ty+25,20,2,P.tD);
     rv(tx+24,ty+25,2,1,P.tD);rv(tx+44,ty+25,2,1,P.tD);
     d(tx+23,ty+24,P.tM);d(tx+46,ty+24,P.tM);
-    if (A.mouthSpark > 0) {
+    if (A.mouthSpark > 0 && !MQ.matches) {
       // Inspiration breath puff at mouth as words form
       rv(tx+22, ty+24, 4, 2, '#ffffff');
       d(tx+20, ty+23, '#a0d8ef'); d(tx+26, ty+25, '#e6c468');
@@ -1459,9 +1654,7 @@
             const reply = A.pendingReply;
             A.pendingReply = null;
             if (MQ.matches) {
-              const pinned = mobilePinnedBottom();
-              const toadEl = mobileAppend(reply, 'toad');
-              if (pinned) mobileScrollToTop(toadEl);
+              mobileReceiveReply(reply);
             } else {
               showText(reply);
             }
@@ -1958,8 +2151,7 @@
          scene band, since canvas pixels can't be hidden by the CSS that hides
          the DOM text overlays. */
       renderSceneTop();    // sky filling the screen above the field
-      renderToadCorner();
-      renderMobileThought();
+      renderMobileToad();
     } else {
       drawHistory();
       drawUserBubble();
@@ -1987,6 +2179,18 @@
     // Canvas stretches edge-to-edge via CSS (100vw/100vh). The wrapper
     // is always fullscreen now — no letterboxing. DOM overlays are
     // positioned by update() using the wrapper's clientHeight.
+    if (MQ.matches && typeof renderThoughtCloud === 'function') {
+      const uMsg = document.getElementById('mobileUserMsg');
+      const uBg = document.getElementById('mobileUserBg');
+      const tMsg = document.getElementById('mobileToadMsg');
+      const tBg = document.getElementById('mobileToadBg');
+      if (uBg && uMsg && uMsg.style.display !== 'none') {
+        renderThoughtCloud(uBg, true);
+      }
+      if (tBg && tMsg && tMsg.style.display !== 'none') {
+        renderThoughtCloud(tBg, false);
+      }
+    }
   }
   window.addEventListener('resize',resize);
   resize();
@@ -2058,49 +2262,185 @@
   const uInput = document.getElementById('userInput');
   const sendBtn = document.getElementById('sendBtn');
 
-  /* ---- Mobile chat log (portrait phones) ----
-     Each send rides in as a fresh `.mobile-exchange` at the very bottom of
-     #mobile-chat; it rises up from the bottom edge and pushes older exchanges
-     upward out of view (scroll up to read them). The user message sits on top,
-     the toad's reply is appended beneath it in the same container. On desktop
-     these never run (the callers are guarded by `MQ.matches`),
-     so the canvas swipe-up system is untouched. */
-  const mobileChat = document.getElementById('mobile-chat');
-  let mobileExchange = null;    // container for the in-progress exchange
+  /* ---- Mobile Dialogue System (portrait phones / mobile widths) ----
+     User message glides from bottom to top on send; Toad's reply pops up
+     directly from its thought bubble. If the reply is too long to fit
+     comfortably on screen, it shifts upward into full-screen scrollable
+     mode (pushing the user message up out of the viewport). */
+  const mobileDialogue = document.getElementById('mobileDialogue');
+  const mobileUserMsg = document.getElementById('mobileUserMsg');
+  const mobileUserBg = document.getElementById('mobileUserBg');
+  const mobileUserContent = document.getElementById('mobileUserContent');
+  const mobileToadMsg = document.getElementById('mobileToadMsg');
+  const mobileToadBg = document.getElementById('mobileToadBg');
+  const mobileToadContent = document.getElementById('mobileToadContent');
 
-  function mobileScrollBottom() {
-    mobileChat.scrollTo({ top: mobileChat.scrollHeight, behavior: 'smooth' });
-  }
-  // True when the user is parked at (or near) the newest message rather than
-  // scrolled up reading history — used to avoid yanking them down on a reply.
-  function mobilePinnedBottom() {
-    return mobileChat.scrollHeight - mobileChat.scrollTop - mobileChat.clientHeight < 48;
-  }
-  // Bring a toad reply's TOP edge to the top of the log (with the same 12px gap
-  // as the container padding) so the reader starts at the beginning of the
-  // message, not its end. Browser clamps scrollTop for short/last replies.
-  function mobileScrollToTop(el) {
-    const cTop = mobileChat.getBoundingClientRect().top;
-    const eTop = el.getBoundingClientRect().top;
-    mobileChat.scrollTop += (eTop - cTop) - 12;
-  }
+  function renderThoughtCloud(canvas, isUser) {
+    if (!canvas) return;
+    const parent = canvas.parentElement;
+    const cssW = (parent && parent.offsetWidth) || canvas.offsetWidth || 360;
+    const cssH = (parent && parent.offsetHeight) || canvas.offsetHeight || 80;
+    const scale = 3.5; // Matches Toad's authentic retro pixel grid
 
-  function mobileAppend(text, role) {
-    const msg = document.createElement('div');
-    msg.className = 'mobile-msg ' + role;
-    if (role === 'user') {
-      msg.textContent = text;
-      mobileExchange = document.createElement('div');
-      mobileExchange.className = 'mobile-exchange';
-      mobileExchange.appendChild(msg);
-      mobileChat.appendChild(mobileExchange);
-    } else {
-      msg.innerHTML = '<div>' + formatMessage(text) + '</div>';
-      (mobileExchange || mobileChat).appendChild(msg);
+    const rw = Math.max(30, Math.round(cssW / scale));
+    const rh = Math.max(14, Math.round(cssH / scale));
+    if (canvas.width !== rw || canvas.height !== rh) {
+      canvas.width = rw;
+      canvas.height = rh;
     }
-    mobileScrollBottom();   // keep the newest message in view at the bottom
-    return msg;
+
+    const ctx = canvas.getContext('2d');
+    ctx.imageSmoothingEnabled = false;
+    ctx.clearRect(0, 0, rw, rh);
+
+    const fill = isUser ? '#1c2950' : '#141e42';
+    const border = isUser ? '#3a4c86' : '#33437a';
+    const hl = isUser ? '#5c74b2' : '#4e6298';
+    const glint = isUser ? '#829fd8' : '#a0d8ef';
+
+    const d = (x, y, col) => {
+      if (x >= 0 && x < rw && y >= 0 && y < rh) {
+        ctx.fillStyle = col;
+        ctx.fillRect(x, y, 1, 1);
+      }
+    };
+    const rv = (x, y, w, h, col) => {
+      if (w <= 0 || h <= 0) return;
+      ctx.fillStyle = col;
+      ctx.fillRect(x, y, w, h);
+    };
+
+    const ox = 0;
+    const oy = 0;
+    const w = rw;
+    const h = rh;
+
+    if (isUser) {
+      // 1. Fill rounded body (authentic 2-pixel stepped retro corners matching desktop & input bubble)
+      rv(ox + 2, oy, w - 4, h, fill);
+      rv(ox, oy + 2, w, h - 4, fill);
+      rv(ox + 1, oy + 1, w - 2, h - 2, fill);
+
+      // 2. Shading: moonlight highlight line under top border
+      rv(ox + 3, oy + 1, w - 6, 1, hl);
+      d(ox + 2, oy + 2, hl); d(ox + w - 3, oy + 2, hl);
+      d(ox + 6, oy + 1, glint); d(ox + 7, oy + 1, glint);
+      d(ox + w - 8, oy + 1, glint);
+
+      // 3. Borders: Straight 1-pixel edges
+      rv(ox + 2, oy, w - 4, 1, border);
+      rv(ox + 2, oy + h - 1, w - 4, 1, border);
+      rv(ox, oy + 2, 1, h - 4, border);
+      rv(ox + w - 1, oy + 2, 1, h - 4, border);
+
+      // 4. Stepped rounded corners (2-pixel steps)
+      d(ox + 1, oy, border); d(ox, oy + 1, border);
+      d(ox + w - 2, oy, border); d(ox + w - 1, oy + 1, border);
+      d(ox + 1, oy + h - 1, border); d(ox, oy + h - 2, border);
+      d(ox + w - 2, oy + h - 1, border); d(ox + w - 1, oy + h - 2, border);
+    } else {
+      // Toad's text box: a little more rounded (4-pixel smooth stepped curve: 2-1-2)
+      // 1. Fill rounded body
+      rv(ox + 4, oy, w - 8, h, fill);
+      rv(ox, oy + 4, w, h - 8, fill);
+      rv(ox + 2, oy + 1, w - 4, h - 2, fill);
+      rv(ox + 1, oy + 2, w - 2, h - 4, fill);
+
+      // 2. Borders: Straight 1-pixel edges on all 4 sides (no extra line on top border)
+      rv(ox + 4, oy, w - 8, 1, border);
+      rv(ox + 4, oy + h - 1, w - 8, 1, border);
+      rv(ox, oy + 4, 1, h - 8, border);
+      rv(ox + w - 1, oy + 4, 1, h - 8, border);
+
+      // 3. Stepped rounded corners (smooth 4-pixel retro curve: 2 horizontal, 1 diagonal, 2 vertical)
+      // Top-left
+      d(ox + 3, oy, border); d(ox + 2, oy, border);
+      d(ox + 1, oy + 1, border);
+      d(ox, oy + 2, border); d(ox, oy + 3, border);
+
+      // Top-right
+      d(ox + w - 4, oy, border); d(ox + w - 3, oy, border);
+      d(ox + w - 2, oy + 1, border);
+      d(ox + w - 1, oy + 2, border); d(ox + w - 1, oy + 3, border);
+
+      // Bottom-left
+      d(ox + 3, oy + h - 1, border); d(ox + 2, oy + h - 1, border);
+      d(ox + 1, oy + h - 2, border);
+      d(ox, oy + h - 3, border); d(ox, oy + h - 4, border);
+
+      // Bottom-right
+      d(ox + w - 4, oy + h - 1, border); d(ox + w - 3, oy + h - 1, border);
+      d(ox + w - 2, oy + h - 2, border);
+      d(ox + w - 1, oy + h - 3, border); d(ox + w - 1, oy + h - 4, border);
+    }
   }
+  window.renderThoughtCloud = renderThoughtCloud;
+
+  function mobileSendUser(text) {
+    if (!mobileDialogue || !mobileUserMsg || !mobileToadMsg) return;
+
+    mobileDialogue.classList.remove('is-fullscreen');
+    mobileToadMsg.style.display = 'none';
+
+    if (mobileUserContent) {
+      mobileUserContent.textContent = text;
+    } else {
+      mobileUserMsg.textContent = text;
+    }
+    mobileUserMsg.style.display = 'block';
+    renderThoughtCloud(document.getElementById('mobileUserBg'), true);
+
+    mobileUserMsg.classList.remove('entering');
+    void mobileUserMsg.offsetWidth; // trigger reflow for CSS keyframe glide
+    mobileUserMsg.classList.add('entering');
+  }
+
+  function mobileReceiveReply(text) {
+    if (!mobileDialogue || !mobileToadMsg || !mobileToadContent) return;
+
+    mobileToadContent.innerHTML = formatMessage(text);
+    mobileToadMsg.style.display = 'block';
+    renderThoughtCloud(document.getElementById('mobileToadBg'), false);
+
+    mobileToadMsg.classList.remove('entering');
+    void mobileToadMsg.offsetWidth;
+    mobileToadMsg.classList.add('entering');
+
+    // Position toad response below user message:
+    // Use offsetTop and offsetHeight so CSS keyframe translation does not displace layout
+    const uTop = mobileUserMsg.offsetTop;
+    const uH = mobileUserMsg.offsetHeight;
+    const topPos = Math.max(70, Math.round(uTop + uH + 12));
+    mobileToadMsg.style.top = topPos + 'px';
+
+    // Measure space to determine if reply is too long:
+    const winH = window.innerHeight;
+    const inputEl = document.getElementById('userInput');
+    const inputTop = inputEl ? inputEl.getBoundingClientRect().top : (winH - 70);
+    const availableSpace = Math.max(120, inputTop - topPos - 20);
+
+    // Measure required content height:
+    const naturalH = mobileToadContent.scrollHeight;
+
+    // Check if the response overflows the available height or takes > 42% of screen
+    const isLong = (naturalH > availableSpace) || (naturalH > winH * 0.42) || (text.length > 250);
+
+    if (isLong) {
+      setTimeout(() => {
+        if (MQ.matches) {
+          mobileDialogue.classList.add('is-fullscreen');
+          mobileToadContent.scrollTop = 0;
+          renderThoughtCloud(document.getElementById('mobileToadBg'), false);
+        }
+      }, 300);
+    } else {
+      requestAnimationFrame(() => {
+        renderThoughtCloud(document.getElementById('mobileToadBg'), false);
+      });
+    }
+  }
+  window.mobileSendUser = mobileSendUser;
+  window.mobileReceiveReply = mobileReceiveReply;
 
   function dispatchMessage() {
     if (A.chatState === 'SWIPING_UP') return;
@@ -2165,9 +2505,9 @@
     window.chatHistory.push({ role: "user", parts: [{ text: text }] });
     recordMessage('user', text);
 
-    // Mobile: push exchange directly into the mobile chat log (no premature "..." bubble)
+    // Mobile: push exchange to top
     if (MQ.matches) {
-      mobileAppend(text, 'user');
+      mobileSendUser(text);
     }
 
     /* Deploy-safe: the API key lives server-side in /api/chat (env var),

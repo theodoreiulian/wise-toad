@@ -154,58 +154,25 @@ pure live-only chat.
 
 ## Mobile layout (portrait phones)
 
-On `@media (max-width: 768px) and (orientation: portrait)` (mirrored in JS as `MQ =
-matchMedia(...)`) the desktop canvas-chat is swapped for a plain DOM chat, **but the scene stays
-fullscreen**.
+On `@media (max-width: 768px) and (orientation: portrait)` (mirrored in JS as `MQ = matchMedia(...)`), the scene layout adapts to mobile:
 
-- **Fullscreen scene + toad in the corner.** The whole field must fill the screen while *only* the
-  toad sits small at the bottom-right — and the toad is just pixels on the same 320×180 canvas as the
-  field, so this needs **two canvases**. `#canvasWrapper` is fixed `100vw/100vh`; a 16:9 scene can't fill
-  a tall portrait *and* show a wide span, so `canvas#scene` is `width:194vw; height:auto` anchored
-  **bottom**-left (≈ grid x:0–165 as a band filling the *lower* screen, so the field reaches the bottom
-  edge and the corner toad sits grounded on the grass). The scene band only fills the lower ~half, so a
-  **third canvas `#sceneTop`** (320×180, same `194vw` width, positioned
-  `bottom: calc(194vw*0.5625 - 2px)` = the scene's rendered height minus a 2px **overlap** so no gap
-  line shows) stacks above `#scene` to fill the rest of the screen. **Seam continuity is critical**:
-  both `#scene` and `#sceneTop` sample the *same* continuous gradient `skyAt(worldY)` (a clamped linear
-  ramp SKY_MID→SKY_HZ keyed to world-y) — `drawSky()` uses `skyAt(y)`, `drawSceneTop()` uses
-  `skyAt(y-180)` (its rows are above the main scene) + `cloudsT`. So there's no value jump and no slope
-  kink at the join. Two more guards keep the join invisible: the wrapper has a `#101234` (night sky)
-  background, and `drawAmbient()`'s top moon-wash + top vignette are applied **only on desktop**
-  (on mobile the main scene's top edge *is* the seam, so tinting it there would draw a line). In
-  `render()`, `drawToad()` is **skipped** when `MQ.matches`;
-  instead `renderToadCorner()` re-renders just the toad onto a second `<canvas id="toadCorner">`
-  (internal 84×98) pinned bottom-right. It works by swapping the module-level context `G` (now `let`,
-  not `const`) to the corner ctx `GT`, translating by `(-TOAD_OX, -TOAD_OY)` ≈ `(-178,-69)` so the
-  toad's grid bounding box lands at the corner canvas origin, calling `drawToad()`, then restoring
-  `G`. All primitives (`rv`/`d`/…) close over `G`, so the swap redirects them for free.
-- **Chat.** `#userInput`/`#sendBtn` sit bottom-left (left of the toad); the desktop **DOM** overlays
-  (`#bubbleText`, `#sentMessage`, `#histLayer`) are `display:none !important`. **Crucially, the desktop
-  *canvas* bubble system (`drawHistory`/`drawUserBubble`/`drawBubble`) is also skipped in `render()`
-  when `MQ.matches`** — those draw bubble *pixels* onto `#scene`, which CSS can't hide, so leaving them
-  on would bleed stray bubbles onto the scene band. The `#mobile-chat` flex column fills everything
-  above the bottom strip and becomes the conversation. `dispatchMessage` still runs the desktop swipe
-  *state* machinery every send (harmless now that nothing draws it — overlays hidden, canvas draws
-  skipped), so `chatHistory`/`recordMessage` stay consistent. The mobile UI is layered on via
-  `mobileAppend(text, role)`, guarded by `MQ.matches`: a
-  **user** turn creates a fresh `.mobile-exchange` and **appends** it to the *bottom* of `#mobile-chat`
-  (newest at the bottom, like a normal messaging app — it rises up from the bottom edge via the
-  `mobileSlideIn` `translateY(16px)→0` animation and pushes older exchanges upward out of view); the
-  **toad** turn appends its `.mobile-msg` *beneath* the user message in that same container. Short
-  conversations are pinned to the bottom (near the input) by `.mobile-exchange:first-child { margin-top:
-  auto }`, which collapses to 0 once content overflows so scroll-up history still works. `mobileAppend`
-  calls `mobileScrollBottom()` (sets `scrollTop = scrollHeight`) so each send jumps to the newest
-  message. During thinking, no premature `"..."` bubble is shown; instead `#toadCorner` (84×98) shows
-  the toad's brow star and meditative levitation, while `#mobileThought` renders the cosmic thought cloud
-  floating high in the open starry sky (top: 24%), well clear of the user's message at the bottom.
-  When the reply/error arrives after thought crystallization, `mobileAppend` is called with a stepped
-  entrance animation (`mobileToadEnter`), and the log scrolls to the **top** of the toad's new message
-  (`mobileScrollToTop(el)`) ~12px below the log top. This re-scroll only fires if `mobilePinnedBottom()`
-  was true before the arrival.
-
-Reverting to desktop-only: remove the mobile CSS block + `#toadCorner`/`#mobileThought`/`#mobile-chat` markup,
-restore `const G`, drop `MQ`/`GT`/`GMT`/`renderToadCorner`/`renderMobileThought` and the `MQ.matches` branches in `render()`/
-`dispatchMessage`, and the `mobileAppend`/`mobileScrollBottom`/`mobilePinnedBottom`/`mobileExchange` definitions.
+- **Fullscreen backdrop + big centered Toad.** The meadow backdrop is centered horizontally on `canvas#scene`, with horizon grounded around 44vh from the bottom. `#sceneTop` stacks seamlessly above `#scene` to fill the starlit sky.
+- **The Wise Toad Stage (`#toadMobile`).** A dedicated 140×160 canvas centered at `left: 50%; top: 52%; transform: translate(-50%, -50%); width: min(72vw, 290px);` renders the Toad big in the center of the screen in lotus pose, with breathing, forehead third-eye spark, golden irises awakening, and foreground grass blades swaying across its lap. During the thinking and transition states, rising connector orbs sprout upward from its temple to the cosmic thought cloud centered above its head, cycling runes at 6 fps, condensing into a wisdom pearl, and streaming down to its mouth with inspiration breath puff.
+- **Text Input Box at Bottom.** `#userInput`, `#inputBubbleBg`, `#inputBubbleBorder`, and `#sendBtn` span across the bottom of the screen with safe-area padding (`bottom: calc(16px + env(safe-area-inset-bottom))`), providing a wide, comfortable typing area. The layout is layered: `#inputBubbleBg` (z-index 4, background fill), `#userInput` (z-index 5, clipped text area), `#inputBubbleBorder` (z-index 6, opaque pixel border frame with `pointer-events: none`), and `#sendBtn` (z-index 7). When user text scrolls upward, it cleanly passes behind the opaque top border rather than rendering over it.
+- **Mobile Dialogue Overlay (`#mobileDialogue`).**
+  - **Pixel-Art Rounded Rectangle Canvases (`#mobileUserBg`, `#mobileToadBg`).** Both dialogue bubbles are rendered using clean, authentic retro pixel-art rounded rectangles drawn on low-res `<canvas>` elements scaled with `image-rendering: pixelated;` at the Toad's 3.5px grid scale (`renderThoughtCloud`). They preserve all the cosmic thought bubble design elements (colors, shading, moonlight highlights, and glints) within a clean rounded rectangular silhouette:
+    - **Stepped Rounded Corners**: 2-pixel retro corner cuts on the user message box matching `#inputBubbleBg`, and smooth 4-pixel stepped circular corners (2 horizontal, 1 diagonal, 2 vertical) on the Toad's message box for a rounder yet crisp retro pixel-art contour.
+    - **Moonlight Shading Highlight**: A 1-retro-pixel highlight line right beneath the top border (`#5c74b2`) with twinkling starlight glint pixels (`#829fd8`) on the user message box, while the Toad's message box maintains a clean, uniform 1-pixel border on all four sides without extra pixel lines.
+    - **Cosmic Palette**: Deep cosmic fills (`#1c2950` for user, `#141e42` for toad) with midnight borders (`#3a4c86` for user, `#33437a` for toad).
+    - **Padding**: Clean padding (`padding: 10px 18px` on `#mobileUserContent`, `padding: 14px 20px` on `#mobileToadContent`) with crisp `'VT323'` typography.
+  - **User Message (`#mobileUserMsg`).** On send, glides up from the bottom input to the top of the screen as a horizontally centered rounded rectangle (`left: 0; right: 0; margin: 0 auto; width: fit-content; min-width: 160px; max-width: calc(100% - 28px);`). Sizing is dynamic based on text length: short questions stay compact, while medium-to-long queries widen up to the exact full width of the Toad's response (`calc(100% - 28px)`). Animated with an active luminous starlight halo (`mobileUserGlideUp`).
+  - **Toad Response (`#mobileToadMsg`) & Thought-to-Message Pop-Up Transition.** No speech tail or arrow. Instead, the response emerges directly from the Toad's thought bubble as the culmination of the thinking sequence:
+    1. During contemplation, the thought cloud hovers above the Toad's forehead with rising connector orbs.
+    2. When done thinking (`CONDENSING` / `STREAMING`), the thought cloud radiates an epiphany core flash (`#ffffff`, `#e6c468`), and celestial starlight sparks stream upward out of the thought bubble.
+    3. The Toad's response (`#mobileToadMsg`) pops up directly from the thought bubble position (`transform-origin: 50% 100%`) with `mobileThoughtPop` (springy 0.52s curve) and an active celestial starlight halo.
+    4. Concurrently, the thought cloud dissolves upward with rising starlight dissipation sparkles, merging seamlessly into the dialogue box as it settles into place.
+  - **Full-Screen Long Response Mode.** If the Toad's response is too long to fit comfortably on screen without colliding with the Toad/input (`naturalH > availableSpace`), `.is-fullscreen` activates: the user message smoothly glides upward out of the viewport (`transform: translateY(calc(-100% - 40px)); opacity: 0;`), the Toad's response moves up to the top of the screen (`top: calc(14px + env(safe-area-inset-top))`), expands down to right above the bottom input (`bottom: calc(72px + env(safe-area-inset-bottom))`), its canvas background updates seamlessly to the fullscreen height, and its inner container (`#mobileToadContent`) becomes smoothly scrollable with touch (`overflow-y: auto; -webkit-overflow-scrolling: touch;`).
+  - **Conversational Reset.** Sending a new message clears full-screen mode, dissolves previous bubbles, and starts the cycle anew.
 
 ## Backend (deploy-safe Gemini proxy) & Thought-to-Speech Transition
 
