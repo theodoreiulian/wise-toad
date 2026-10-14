@@ -38,6 +38,19 @@ vercel --prod
 No `package.json` or build step is needed — `api/chat.js` uses only the Node 18+
 global `fetch`, and `index.html` is served as a static file.
 
+## The living sky (`/api/weather`)
+
+The scene mirrors the visitor's real sky. `GET /api/weather` returns
+`{ lat, lon, city, current }`: the location comes from the host's IP geolocation
+(Vercel `x-vercel-ip-*` headers, Netlify `context.geo`) or an IP lookup via
+geojs.io, and `current` is Open-Meteo's current weather there. Both services are
+free and need no key, so there is nothing to configure. Netlify routes it to
+`netlify/functions/weather.mjs` (see `netlify.toml`).
+
+If the endpoint is missing (any static host), the page asks geojs.io and
+Open-Meteo directly from the browser, so the sky still works; it just costs the
+visitor two extra requests.
+
 ## Porting to another host
 
 The client only depends on a `POST /api/chat` endpoint that accepts

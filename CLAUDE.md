@@ -4,14 +4,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-Wise Toad is an animated pixel-art scene: a meditating toad sitting in a peaceful grassy field at
-night under a deep-navy starlit sky (swaying grass, wildflowers, drifting clouds, distant hills, a
-crescent moon, fireflies), rendered to an HTML5 canvas, with a chat UI for "speaking to the Toad."
-The scene has a **single state — night** (there is no day mode and no toggle). The entire scene — markup,
-CSS, and the rendering/chat engine — lives in `index.html` inside one IIFE
+Wise Toad is an animated pixel-art scene: a meditating toad sitting in a peaceful grassy field
+(swaying grass, wildflowers, drifting clouds, distant hills, poplars, a fence) rendered to an HTML5
+canvas, with a chat UI for "speaking to the Toad." **The meadow mirrors the visitor's real sky**: the
+same time of day (real sun position, real moon position and phase) and the same weather (cloud,
+rain, drizzle, showers + rainbow, storm + lightning, snow + snow cover, fog, frost, wind) as wherever
+they are — see **Living sky** below. There is no toggle. The entire scene — markup, CSS, and the
+rendering/chat engine — lives in `index.html` inside one IIFE
 (`<script>(() => { 'use strict'; ... })()</script>`). The Toad's replies come from Gemini via a
-small server-side proxy in `api/chat.js` (see **Backend** below); that proxy is the only other
-source file.
+small server-side proxy in `api/chat.js` (see **Backend** below); the visitor's location + current
+weather come from `api/weather.js`. Those (plus their Netlify twins) are the only other source files.
 
 ## Running
 
@@ -23,9 +25,17 @@ through a serverless host. For local development with replies:
 vercel dev            # serves index.html + /api/chat, reads GEMINI_API_KEY from .env.local
 ```
 
-See `DEPLOY.md` for full deploy/port instructions. The only external runtime dependency in the
-browser is the VT323 Google Font (loaded via `<link>`); the scene renders fine offline minus that
-font, but the Toad stays silent without the proxy.
+`node local-server.js` serves the same two endpoints without the Vercel CLI. See `DEPLOY.md` for
+full deploy/port instructions. External runtime dependencies: the VT323 Google Font, and for the
+living sky the free keyless APIs Open-Meteo (weather) and geojs.io (IP → location), reached via
+`/api/weather` or directly from the browser when that endpoint is missing (static hosting,
+`file://`). Offline, the sky still follows the clock (location guessed from the timezone) and the
+last cached weather; the Toad stays silent without the chat proxy.
+
+**Preview any sky** with URL params (no network needed when `lat`, `lon` and `weather` are all set):
+`?time=19:40`, `?date=2026-06-21`, `?timelapse=120` (sim seconds per real second),
+`?lat=48.85&lon=2.35`, `?weather=clear|partly|cloudy|overcast|fog|drizzle|rain|showers|storm|snow|frost`.
+`window.ENV` exposes the live state (set `ENV.W` to a new weather object to watch it ease in).
 
 ## Coordinate system (read this first)
 
@@ -40,55 +50,85 @@ right canvas pixels at any scale. Font sizes are scaled by `wrapperH / H` for th
 
 ## Architecture
 
-- **`P`** — the color palette, baked to **night** values (`hillFar`/`hillNear` + the toad's
-  `tD/tM/tL/tB/tE/tSpot/tBelly/tBelly2/tWart/tLid`; most field colours are local consts, see below).
-  **`S`** — scene config; after the field redesign only **`S.toad`** (the toad's x/y) still matters —
-  the other room objects (`win`/`tv`/`shelf`…) are vestigial.
-- **Horizon & field constants** (defined where the old building arrays were): `YH = 96` is the
-  horizon (sky above, field below); `SKY_TOP`/`SKY_MID`/`SKY_HZ` and `GR_FAR`/`GR_NEAR` are `[r,g,b]`
-  gradient anchors; `GCOLS` (grass) and `FCOLS` (flower colour pairs) are the palettes.
+- **`P`** — the color palette. The toad's `tD/tM/tL/tB/tE/tSpot/tBelly/tBelly2/tWart/tLid` and
+  `hillFar`/`hillNear`/`hillRim` are **rewritten every palette tick** by `buildPalette()` (the values
+  in the literal are only first-frame defaults). **`S`** — scene config; only **`S.toad`** (the
+  toad's x/y) still matters — the other room objects (`win`/`tv`/`shelf`…) are vestigial.
+- **Horizon & field constants**: `YH = 96` is the horizon (sky above, field below); `GCOLS` (grass)
+  and `FCOLS` (flower colour pairs) are the palettes (entries relit each tick).
 - **Deterministic RNG**: `mulberry(7)` seeds `frand`, which generates the **field layout once** at
-  load — `grassB`/`grassF` (background/foreground grass tufts), `flowers`, `cloudsA`/`cloudsT` (main +
-  sceneTop clouds), `motes`. Each element stores a position, size, sway `phase`, colour. The seed
-  keeps the field identical across reloads — change it to reshuffle grass/flowers/clouds.
-- **Draw primitives**: `rv(x,y,w,h,c)` = filled rect, `d(x,y,c)` = single pixel, `lerpC(a,b,t)` =
-  rgb gradient lerp (used for the sky & ground gradients), `pxLine` = Bresenham line. (`boxR`/`boxL`
-  fake-iso helpers survive but are now unused.)
+  load — `grassB`/`grassF` (background/foreground grass tufts), `flowers`, `cloudsA`/`cloudsT`, `motes`,
+  `trees`, `fence`, `stars`. The seed keeps the field identical across reloads. Everything the living
+  sky added (cloud shapes, extra/deck clouds, rain drops, snow flakes) comes from a **separate**
+  stream, `rng2 = mulberry(4242)`, so the field layout never shifts; the Milky Way uses `mulberry(99)`.
+- **Draw primitives**: `rv(x,y,w,h,c)` = filled rect, `d(x,y,c)` = single pixel, `pxLine` =
+  Bresenham line, `glowAt(x,y,r,scaleX,rgb,a)` = soft elliptical radial glow (sun/moon halos, fog
+  banks). Colour helpers live at the top of the LIVING SKY section (`mixC`, `css`, `cssA`, `lum`,
+  `smooth`). (`boxR`/`boxL` fake-iso helpers survive but are unused.)
 - **`render()` draws strictly back-to-front** (painter's algorithm). The call order *is* the z-order:
-  sky → stars → moon → clouds → hills → trees → fence → field → background grass → flowers → **toad**
-  → foreground grass (sways in front of the toad) → ambient (moonlight wash + fireflies) → bubbles.
-  Reordering changes occlusion. Grass/flowers sway via `A.sway`; the per-blade tip offset grows with
-  `tt*tt` (more bend at the tip).
+  sky (+ sun glow) → Milky Way → stars → shooting star → moon → sun → rays → clouds → rainbow →
+  lightning bolt → birds → hills → trees → fence → field → back fog/mist → background grass → flowers
+  → butterflies → cloud shadows → **toad** → foreground grass → rain/snow → front fog → ambient
+  (light wash, golden-hour light leak, vignette, fireflies/pollen, lightning flash) → bubbles.
+  Reordering changes occlusion. Grass/flowers sway via `A.sway` (its rate and the blade bend follow
+  the real wind); the per-blade tip offset grows with `tt*tt` (more bend at the tip).
 - **Animation loop**: one `requestAnimationFrame(loop)` → `update(dt)` then `render()`. `dt` is
   clamped to 0.06s. All mutable runtime state lives in object **`A`** (`t` time, `sway` wind, `breath`
-  toad, and all chat/bubble layout state).
+  toad, all chat/bubble layout state, and the sky clocks/events: `cloudT`, `windX`, `precipT`,
+  `skyClock`, `flash`/`bolt`, `shoot`, `birds`). `update()` calls `updateEnv(dt)` first.
 
-## Night palette (single state — no day mode, no toggle)
+## Living sky (time of day + weather — the meadow mirrors the visitor's sky)
 
-The scene is **night-only**: deep navy sky, crescent moon, twinkling stars, fireflies, dark-blue
-chat bubbles. There used to be a day/night theme system with a `#modeToggle` button; it was removed.
-The night colours are now baked directly into the module-level constants — there is no `MODE`,
-`THEMES`, `setMode`, or `body.night` class anymore.
+Everything lives in the **LIVING SKY** section of `index.html` (after the field layout).
 
-- **`TH`** — a single `const` object holding the non-gradient, non-toad night colours:
-  `grassTip`/`stem`, `treeA/B/C`, `fencePost/Rail/Dark`, `horizonGlow`/`fieldPatch`, `cloudW`/
-  `cloudSh`, and the four bubble fill/border pairs (`tbFill/tbBorder` = toad, `ubFill/ubBorder` =
-  user). Read directly by the draw functions.
-- **Gradient anchors + palettes are `const`** at night values: `SKY_TOP`/`SKY_MID`/`SKY_HZ` and
-  `GR_FAR`/`GR_NEAR` (`[r,g,b]`), plus `GCOLS` (grass) and `FCOLS` (flower pairs). The **toad + hill**
-  colours live in `P` (`tD/tM/tL/tB/tE/tSpot/tBelly/tBelly2/tWart/tLid`, `hillFar`/`hillNear`).
-- **Layout stores a palette index**: grass blades and flowers keep a `ci`/`fi` index (not a colour),
-  resolved against `GCOLS`/`FCOLS` at draw time. **`stars`** is generated last (so it doesn't perturb
-  the other deterministic arrays) with a *world-y* (`wy`); `drawStars()` shows those in the main sky
-  (`0..YH`), `drawStarsTop()` shows the negative-`wy` ones in the mobile `#sceneTop` band.
-- **Night draw functions**: `render()` calls `drawSky` → `drawStars` → `drawMoon` → `drawClouds` →
-  hills/trees/fence/field/grass/flowers/toad → `drawAmbient` (cool moonlight wash + vignette +
-  blinking fireflies from the `motes` array). The DOM chat text colours (reply/input/sent/history/
-  links/mobile bubbles + the `.md-b` inline-bold class) are the dark-blue night values directly in the
-  base CSS — no `.night` scoping.
-
-To add a day mode back, you'd re-introduce a theme object + `MODE`/`setMode`, make `SKY_*`/`GR_*`/
-`GCOLS`/`FCOLS`/`TH` swappable, restore `drawSun`/`drawBirds`, and re-add a toggle control.
+- **Where** (`initSky` / `refreshSky` / `fetchSky`): first frame uses the `localStorage` cache
+  (`wiseToad.sky`) or `guessLocation()` (timezone's standard offset → longitude, tz region → rough
+  latitude). Then `fetchSky()` asks `/api/weather` (host IP-geo + Open-Meteo); if that's missing it
+  calls geojs.io + Open-Meteo straight from the browser. Precise browser geolocation is used **only
+  if already granted** — the page never prompts. Weather refreshes every 15 min and on tab return
+  (>10 min stale). Location changes ease (`ENV.latT/lonT`), so the sky never jumps.
+- **When** (`updateSkyBodies`, every 0.25 s): `skyNow()` (real clock, or the `?time`/`?date`/
+  `?timelapse` sim clock) → a compact **SunCalc** port gives real sun + moon altitude/azimuth and the
+  moon's phase/illuminated fraction. `skyXY()` maps them to the grid: the viewer faces the equator,
+  so the sun rises left and sets right; on desktop ±130° of azimuth is squeezed into x 12..212 so a
+  rising/setting sun is **never hidden behind the toad**; on phones the arc spans the visible band
+  (`visRange()`). `ENV.morning` (from azimuth) blends dawn vs dusk palettes.
+- **Weather** (`readWeather`): Open-Meteo `current` (`weather_code` via the `WMO` table, cloud
+  cover, wind, temperature, humidity, visibility, snow depth) → `ENV.W` = `{cloud, rain, drizzle,
+  shower, snow, fog, storm, wind, snowCover, frost, temp, hum}`. `updateEnv` eases `ENV` toward it
+  (snow cover accumulates slowly). Presets for previews are in `WX_PRESETS`.
+- **Palette** (`buildPalette`, every 0.25 s): sun elevation picks a point on a keyframe timeline —
+  `KF_EVE` (day → afternoon → golden → low sun → sunset → afterglow → blue hour → night) and
+  `KF_MORN` (its own cooler, pinker dawn keys; day and night keys are shared) — each key holds sky
+  stops (`zen/top/mid/hz`), sun glow, key light/ambient/saturation, sun disk and cloud colours.
+  Weather then washes the sky toward a cloud deck (darker/greyer for rain, slate-teal + a bright
+  horizon band for storms, bluer at night) and toward fog; dims and greys the light; and
+  `lit(albedo)` relights every **`ALB`** colour (true daylight colours of the toad, grass, flowers,
+  hills, trees, fence, field, snow) into `P`, `TH`, `GCOLS`, `FCOLS`, `PAL.field`. Distant things haze
+  toward the horizon by day and toward the mid-sky at low sun (backlit silhouettes). Night light
+  is floored so the toad never vanishes, and a bright moon lifts the night.
+- **`PAL`** holds everything else the draw functions read: `PAL.sky` (one blurred gradient for
+  world-y −180..YH — main canvas uses rows 180+, mobile `#sceneTop` rows 0..179, so there is no seam),
+  visibilities (`starVis`, `mwVis`, `sunVis`, `moonVis`, `rays`, `rainbow`, `firefly`, `motes`,
+  `dew`, `mist`, `bfly`, `shadowA`), rain/snow colours, toad rim/shadow, vignette and light wash.
+  It also sets the `--sky` CSS variable and `<meta name="theme-color">` (page chrome follows the sky).
+- **What appears when**: sun disk (bigger/warmer near the horizon, sinks behind the hills) + hot
+  horizon glow; real-phase moon (pale by day, earthshine + halo at night); stars + Milky Way (clear,
+  moonless nights) + occasional shooting stars; cumulus sprites (`CLOUDS`, each with a coverage
+  threshold `thr` and an eased alpha `c.a`; repainted only when the quantised cloud colours change;
+  big "deck" clouds gather only near overcast); crepuscular rays through broken cloud at low sun;
+  sun-lit cloud shadows sliding over the field; a rainbow arcing away from the sun when it shines
+  through rain; lightning (flash + bolt, kept clear of the toad); birds on fair days; butterflies on
+  warm calm days; fireflies on warm dry nights, golden pollen in low sun; dew glints and dawn mist
+  on humid mornings; rain streaks + splashes (3 depth layers, slanted by wind); snow flakes, snow
+  cover (buried grass, hidden flowers, white hills/trees/fence caps, drift shadows) and a snow cap on
+  the toad; raindrops beading on the toad; a warm (or moonlit) rim light on his flank facing a low
+  sun; his shadow stretches away from a low sun.
+- **Mobile**: `drawSceneTop()` repeats sky glow, Milky Way, stars, rays, clouds, rain/snow, light wash
+  and flash in the same world coordinates (+180). `drawPrecipStage()` adds near rain/snow in front of
+  the big `#toadMobile` toad, and lightning lights his pixels via `'source-atop'`.
+- **Chat UI colours are deliberately constant** (`TH.tbFill/tbBorder/ubFill/ubBorder`, the DOM text
+  colours and the cosmic thought cloud stay midnight blue) so text reads the same over noon or storm.
 
 ## Chat system (the subtle part)
 
@@ -107,7 +147,7 @@ exchange is snapshotted into `A.old*` (`A.oldTw/oldTh/oldBy/oldBx` and `A.oldUse
 and the scene executes a **frame-driven synchronized dual-scroll animation** (`A.swipeProgress`, 0.76s–0.85s):
 1. **Previous Exchange Ascend & Dissolve**: The previous user message (`#oldSentMessage`) scrolls from `y = 15`
    up into negative space (`y = -35`) with smooth opacity fading; the previous toad bubble (`#bubbleText`)
-   cleanly detaches its speech tail from the toad's mouth (`chatState !== 'SWIPING_UP'`), ascends into the night
+   cleanly detaches its speech tail from the toad's mouth (`chatState !== 'SWIPING_UP'`), ascends into the
    sky, and dissolves into starlight.
 2. **New Message Gliding Entrance**: The new user message (`#sentMessage`) detaches from the input dock
    (`y = 168 - th`) and glides upward across the meadow into `y = 15` following a balanced cubic ease-in-out
@@ -156,7 +196,7 @@ pure live-only chat.
 
 On `@media (max-width: 768px) and (orientation: portrait)` (mirrored in JS as `MQ = matchMedia(...)`), the scene layout adapts to mobile:
 
-- **Fullscreen backdrop + big centered Toad.** The meadow backdrop is centered horizontally on `canvas#scene`, with horizon grounded around 44vh from the bottom. `#sceneTop` stacks seamlessly above `#scene` to fill the starlit sky.
+- **Fullscreen backdrop + big centered Toad.** The meadow backdrop is centered horizontally on `canvas#scene`, with horizon grounded around 44vh from the bottom. `#sceneTop` stacks seamlessly above `#scene` to fill the sky above the field.
 - **The Wise Toad Stage (`#toadMobile`).** A dedicated 140×160 canvas centered at `left: 50%; top: 52%; transform: translate(-50%, -50%); width: min(72vw, 290px);` renders the Toad big in the center of the screen in lotus pose, with breathing, forehead third-eye spark, golden irises awakening, and foreground grass blades swaying across its lap. During the thinking and transition states, rising connector orbs sprout upward from its temple to the cosmic thought cloud centered above its head, cycling runes at 6 fps, condensing into a wisdom pearl, and streaming down to its mouth with inspiration breath puff.
 - **Text Input Box at Bottom.** `#userInput`, `#inputBubbleBg`, `#inputBubbleBorder`, and `#sendBtn` span across the bottom of the screen with safe-area padding (`bottom: calc(16px + env(safe-area-inset-bottom))`), providing a wide, comfortable typing area. The layout is layered: `#inputBubbleBg` (z-index 4, background fill), `#userInput` (z-index 5, clipped text area), `#inputBubbleBorder` (z-index 6, opaque pixel border frame with `pointer-events: none`), and `#sendBtn` (z-index 7). When user text scrolls upward, it cleanly passes behind the opaque top border rather than rendering over it.
 - **Mobile Dialogue Overlay (`#mobileDialogue`).**
@@ -182,7 +222,7 @@ Rather than popping onto the screen abruptly, the thinking state unfolds via a c
 1. **Third-Eye Ignition (0.00s .. 0.15s)**: A golden starlight spark ignites on the toad's brow between its closed eyes.
 2. **Sequential Rising Connector Orbs (0.15s .. 0.45s)**: Connector Orbs 1 -> 2 -> 3 sprout sequentially upward from the temple into the sky with 1px/3px glints before expanding to full scale.
 3. **Cosmic Cloud Stepped Bloom (0.45s .. 0.85s)**: At Orb 3's tip, the cloud sparks with a birth-flash and unfurls through an 8-bit stepped expansion curve (18% -> 42% -> 70% -> 90% -> 103.5% overshoot -> 100%) with active celestial cyan/indigo border highlights (`#5c74b2`, `#a0d8ef`) before settling into deep midnight blue.
-4. On mobile, the corner toad's third eye ignites first, followed by the cloud unfurling with the same stepped bloom in the night sky.
+4. On mobile, the corner toad's third eye ignites first, followed by the cloud unfurling with the same stepped bloom in the sky.
 
 While settled in thought, no speech bubble is rendered. On desktop, `drawThought()` renders the thought cloud lowered
 on the screen (y >= 66 in the open meadow space at toad shoulder level), completely below the user's sent message
@@ -195,6 +235,12 @@ multi-stage transition (`A.transPhase`):
 2. **STREAMING & AWAKENING (0.38s .. 0.70s)**: The wisdom pearl streams down the connector orbs (Orbs 3 -> 2 -> 1 flash in sequence), the toad's third-eye brow blazes, a breath of inspiration puffs from its mouth, and the toad opens its serene eyes with golden starlight irises (`A.toadAwake`).
 3. **BLOOMING (0.70s .. 1.22s)**: The tail connects directly from the toad's mouth to the sprout point, and the speech bubble unfurls with an 8-step retro pixel curve, active celestial blue starlight borders (`#829fd8` -> `#5c74b2`), and soft text fade-in. On mobile, the corner toad awakens and the reply blooms into `#mobile-chat` with an 8-step stepped bounce (`mobileToadEnter`).
 4. **SETTLING (1.22s .. 1.42s)**: Borders relax into midnight indigo (`#33437a`), and the toad remains calmly present with its enlightened gaze while imparting wisdom.
+
+**`/api/weather`** (`api/weather.js`, Vercel/local; `netlify/functions/weather.mjs`, a Functions
+2.0 module because only those get `context.geo`): `GET [?lat&lon]` → `{ lat, lon, city, current }`.
+Location comes from the query, the host's IP-geo (Vercel `x-vercel-ip-*` headers / Netlify
+`context.geo`), or a geojs.io IP lookup (a private/loopback IP means local dev, so the server's own
+public IP is looked up). It holds no secrets; the browser can do the same without it.
 
 **The key never touches the browser.** `api/chat.js` is a Node serverless function that holds the
 Gemini API key in the `GEMINI_API_KEY` env var, hardcodes an ordered `MODELS` list (`gemini-3-flash-preview` → `gemini-3.6-flash` → `gemini-3.8-flash`, falling through on 503 "high demand"), adds
