@@ -197,7 +197,7 @@ multi-stage transition (`A.transPhase`):
 4. **SETTLING (1.22s .. 1.42s)**: Borders relax into midnight indigo (`#33437a`), and the toad remains calmly present with its enlightened gaze while imparting wisdom.
 
 **The key never touches the browser.** `api/chat.js` is a Node serverless function that holds the
-Gemini API key in the `GEMINI_API_KEY` env var, hardcodes the model (`gemini-3-flash-preview`), adds
+Gemini API key in the `GEMINI_API_KEY` env var, hardcodes an ordered `MODELS` list (`gemini-3-flash-preview` → `gemini-3.6-flash` → `gemini-3.8-flash`, falling through on 503 "high demand"), adds
 the system prompt + Google Search grounding tool + `BLOCK_NONE` safety settings server-side, and
 returns `{ reply }` (or `{ error }`). The system prompt — the Toad's wise-philosopher persona —
 lives in `api/chat.js` and `netlify/functions/chat.js`; editing the Toad's voice (or the model) means editing those files,
