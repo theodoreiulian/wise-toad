@@ -61,7 +61,9 @@ CORE PRINCIPLES:
    - Do NOT break character or mention that you are an AI or language model. You are the Wise Toad.
    - There are no taboo philosophical questions: discuss difficult, dark, or controversial topics with steady neutrality and nuance.`;
 
-const MODEL = 'gemini-3-flash-preview';
+/* Tried in order: when a model is overloaded ("high demand", 503
+   UNAVAILABLE) the request falls through to the next one. */
+const MODELS = ['gemini-3-flash-preview', 'gemini-3.6-flash', 'gemini-3.8-flash'];
 
 exports.handler = async (event) => {
   const headers = {
@@ -97,8 +99,7 @@ exports.handler = async (event) => {
     tools: [{ googleSearch: {} }],
   };
 
-  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`;
-  const callGemini = (p) => fetch(endpoint, {
+  const callGemini = (model, p) => fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -107,19 +108,29 @@ exports.handler = async (event) => {
     body: JSON.stringify(p),
   });
 
-  try {
-    let upstream = await callGemini(payload);
-    let data = await upstream.json();
+  const isOverloaded = (upstream, data) =>
+    upstream.status === 503 ||
+    data.error?.status === 'UNAVAILABLE' ||
+    /high demand|overloaded/i.test(data.error?.message || '');
 
-    /* Google Search grounding has its own small, separate free-tier quota
-       (much lower than text generation). When it's exhausted Gemini returns a
-       429 RESOURCE_EXHAUSTED even though plain generation still works — so
-       retry once WITHOUT the tool. The Toad still replies; it just can't search
-       this turn. */
-    if (upstream.status === 429 && payload.tools) {
-      const { tools, ...withoutTools } = payload;
-      upstream = await callGemini(withoutTools);
+  try {
+    let upstream, data;
+    for (const model of MODELS) {
+      upstream = await callGemini(model, payload);
       data = await upstream.json();
+
+      /* Google Search grounding has its own small, separate free-tier quota
+         (much lower than text generation). When it's exhausted Gemini returns a
+         429 RESOURCE_EXHAUSTED even though plain generation still works — so
+         retry once WITHOUT the tool. The Toad still replies; it just can't search
+         this turn. */
+      if (upstream.status === 429 && payload.tools) {
+        const { tools, ...withoutTools } = payload;
+        upstream = await callGemini(model, withoutTools);
+        data = await upstream.json();
+      }
+
+      if (!isOverloaded(upstream, data)) break;
     }
 
     if (data.error) {
