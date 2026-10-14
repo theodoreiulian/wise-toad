@@ -4,11 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Wise Toad</title>
-  <meta name="description" content="A dark, moody, lo-fi pixel art scene featuring a meditating toad in a cluttered cyberpunk room at night.">
+  <meta name="description" content="A lo-fi pixel art meadow where a meditating toad sits beneath your own sky: the same time of day, sun, moon and weather as wherever you are.">
+  <meta name="theme-color" content="#101234">
   <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
   <style>
     *{margin:0;padding:0;box-sizing:border-box}
-    html,body{width:100%;height:100%;overflow:hidden;background:#101234}
+    html,body{width:100%;height:100%;overflow:hidden;background:var(--sky,#101234)}
     #canvasWrapper { position:fixed; inset:0; width:100vw; height:100vh; overflow:hidden; z-index:0; }
     canvas#scene{image-rendering:pixelated;image-rendering:crisp-edges;-ms-interpolation-mode:nearest-neighbor;display:block; width:100%; height:100%;}
     #bubbleText, #sentMessage, #oldSentMessage {
@@ -146,7 +147,7 @@
         height: 100vh !important;
         z-index: 0;
         overflow: hidden !important;
-        background: #101234;
+        background: var(--sky, #101234);
       }
 
       /* Scene canvas centered horizontally, horizon resting around 44vh from bottom */
@@ -517,6 +518,16 @@
     // 3. Thought animation (connector orbs, cloud, condensation, streaming)
     drawMobileThoughtOnStage();
 
+    // 4. Rain / snow falling in front of the toad
+    drawPrecipStage();
+
+    // 5. Lightning lights the big toad too ('source-atop': only its own pixels)
+    if (A.flash > 0.01) {
+      GTM.globalCompositeOperation = 'source-atop';
+      rv(0, 0, TM.width, TM.height, flashCol());
+      GTM.globalCompositeOperation = 'source-over';
+    }
+
     G = prev;
   }
 
@@ -732,15 +743,20 @@
     G = prev;
   }
   /* Mobile: the sky continues upward above the field. #sceneTop sits directly
-     above #scene, so its rows map to world-y (y - 180): the bottom row (y≈180)
-     is worldY≈0 = drawSky()'s top colour, and it darkens smoothly toward the
-     screen top. Sampling the SAME skyAt() makes the two canvases one seamless
-     gradient — no value jump and no slope kink at the join. */
+     above #scene, so its rows map to world-y (y - 180). PAL.sky holds ONE
+     continuous gradient for world-y -180..YH, so the two canvases join with no
+     seam; everything else here (glow, Milky Way, stars, rays, clouds,
+     rain/snow, lightning) is drawn in the same world coordinates, offset +180. */
   function drawSceneTop(){
-    const HT = 180;
-    for (let y = 0; y < HT; y++) rv(0, y, W, 1, skyAt(y - 180));
+    for (let y = 0; y < 180; y++) rv(0, y, W, 1, PAL.sky[y]);
+    drawSkyGlow(180);
+    drawMilkyWay(180);
     drawStarsTop();
-    drawClouds(cloudsT);
+    drawRays(180);
+    drawClouds(180);
+    drawPrecip(180);
+    drawLightWash(180);
+    if (A.flash > 0.01) rv(0, 0, W, 180, flashCol());
   }
 
   /* =================================================================
@@ -766,23 +782,25 @@
     cup:'#7a2828', straw:'#ccccbb',
     bottle:'#3a4a5a', bottleH:'#5a7a9a',
     bookA:'#665544', bookB:'#886655', bookC:'#aa7766', bookD:'#554433',
-    /* --- peaceful grassy field (night) --- */
-    hillFar:'#2e3a4a', hillNear:'#242e3c',
+    /* --- peaceful grassy field --- */
+    hillFar:'#2e3a4a', hillNear:'#242e3c', hillRim:'rgba(0,0,0,0)',
   };
+  /* The toad (t*) and hill colours above are only first-frame defaults:
+     buildPalette() relights them from ALB (their daylight colours) every
+     tick, so they follow the visitor's real sun, moon and weather. */
 
   /* =================================================================
-     THEME  (night — the only mode)
-     Every colour the moonlit scene needs that isn't a gradient anchor (those
-     are the SKY and GR consts below) or a toad/hill colour (those live in P).
-     The field LAYOUT stores palette *indices* (ci/fi) resolved against
-     GCOLS/FCOLS at draw time.
+     THEME
+     Scene colours that aren't gradients or toad/hill colours. Everything
+     except the chat-bubble pairs is rewritten by buildPalette() from the
+     live sky (see LIVING SKY below); the bubbles stay a constant midnight
+     blue so text reads the same over a noon sky or a storm.
      ================================================================= */
   const TH = {
     grassTip:'#557064', stem:'#1c3a28',
     treeA:'#1c2a22', treeB:'#162018', treeC:'#101810',
     fencePost:'#2a2438', fenceRail:'#34304a', fenceDark:'#1e1a2a',
     horizonGlow:'rgba(120,130,180,0.22)', fieldPatch:'rgba(120,150,200,0.05)',
-    cloudW:'#444c78', cloudSh:'#343a60',
     tbFill:'#16224a', tbBorder:'#33437a', ubFill:'#1c2950', ubBorder:'#3a4c86',
   };
 
@@ -831,10 +849,8 @@
      FIELD LAYOUT  (peaceful grassy field — generated once, deterministic)
      ================================================================= */
   const YH = 96;                                  // horizon: sky above, field below
-  /* Sky/ground gradient anchors + grass/flower palettes (night). The field
-     layout below stores palette indices (ci/fi) resolved against these. */
-  const SKY_TOP=[6,8,28], SKY_MID=[16,18,52], SKY_HZ=[66,62,106];
-  const GR_FAR=[40,52,60], GR_NEAR=[20,32,28];
+  /* Grass/flower palettes. The field layout below stores palette indices
+     (ci/fi) resolved against these; buildPalette() relights the entries. */
   const GCOLS=['#1c3530','#223f34','#284b3a','#2f5742','#172c26'];
   const FCOLS=[['#9aa6c8','#a89a62'],['#a89a62','#7e6a44'],['#9a76a0','#a39866'],['#776fa0','#a39866'],['#9a6360','#a89a62'],['#aeb6c8','#7e6a44']];
 
@@ -859,6 +875,635 @@
   for(let i=0;i<90;i++) stars.push({x:frand()*W|0, wy:(frand()*(YH+170)-170)|0, ph:frand()*6.28, sp:1.4+frand()*2.6, b:0.45+frand()*0.55, big:frand()<0.16});
 
   /* =================================================================
+     LIVING SKY — the meadow mirrors the visitor's real sky
+     -----------------------------------------------------------------
+     The scene is lit by the visitor's ACTUAL sun, moon and weather:
+       • where:   last visit's cache → /api/weather (host IP-geo) → a
+                  browser IP lookup; a timezone guess covers frame one.
+       • when:    the browser clock → real sun + moon position and moon
+                  phase (compact SunCalc port below).
+       • weather: Open-Meteo "current" conditions (via /api/weather, or
+                  straight from the browser on static hosting).
+     Sun elevation picks a point on a palette timeline (KF_EVE / KF_MORN:
+     night → blue hour → sunset/sunrise → golden hour → day); clouds,
+     rain, snow and fog then grey, darken and haze it; buildPalette()
+     relights every ALB colour (true daylight colours) with the result.
+     Everything eases, so the meadow drifts through the day as slowly as
+     the real one.
+
+     Preview any sky with URL params (handy for screenshots):
+       ?time=19:40  ?date=2026-06-21  ?timelapse=120  ?lat=48.85&lon=2.35
+       ?weather=clear|partly|cloudy|overcast|fog|drizzle|rain|showers|storm|snow|frost
+     ================================================================= */
+  const Q = new URLSearchParams(location.search);
+
+  /* ---------- colour + easing helpers ---------- */
+  const clamp01 = v => v < 0 ? 0 : v > 1 ? 1 : v;
+  const smooth = (a, b, v) => { const t = clamp01((v - a) / (b - a)); return t * t * (3 - 2 * t); };
+  const mixC = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
+  const addC = (a, b) => [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
+  const mulC = (a, k) => [a[0] * k, a[1] * k, a[2] * k];
+  const lum = c => 0.3 * c[0] + 0.59 * c[1] + 0.11 * c[2];
+  const ch = v => v < 0 ? 0 : v > 255 ? 255 : v | 0;
+  const css = c => `rgb(${ch(c[0])},${ch(c[1])},${ch(c[2])})`;
+  const cssA = (c, a) => `rgba(${ch(c[0])},${ch(c[1])},${ch(c[2])},${clamp01(a).toFixed(3)})`;
+
+  /* ---------- astronomy (compact port of SunCalc, © Vladimir Agafonkin, BSD-2) ----------
+     Angles in radians; azimuth 0 = due south, positive toward the west. */
+  const RAD = Math.PI / 180, OBL = RAD * 23.4397;
+  const toDays = ms => ms / 86400000 - 10957.5;            // days since J2000
+  const raOf  = (l, b) => Math.atan2(Math.sin(l) * Math.cos(OBL) - Math.tan(b) * Math.sin(OBL), Math.cos(l));
+  const decOf = (l, b) => Math.asin(Math.sin(b) * Math.cos(OBL) + Math.cos(b) * Math.sin(OBL) * Math.sin(l));
+  function sunCoords(d){
+    const M = RAD * (357.5291 + 0.98560028 * d);
+    const L = M + RAD * (1.9148 * Math.sin(M) + 0.02 * Math.sin(2 * M) + 0.0003 * Math.sin(3 * M)) + RAD * 102.9372 + Math.PI;
+    return { ra: raOf(L, 0), dec: decOf(L, 0) };
+  }
+  function moonCoords(d){
+    const L = RAD * (218.316 + 13.176396 * d), M = RAD * (134.963 + 13.064993 * d), F = RAD * (93.272 + 13.229350 * d);
+    const l = L + RAD * 6.289 * Math.sin(M), b = RAD * 5.128 * Math.sin(F);
+    return { ra: raOf(l, b), dec: decOf(l, b), dist: 385001 - 20905 * Math.cos(M) };
+  }
+  function horizonPos(c, d, lat, lon){
+    const H = RAD * (280.16 + 360.9856235 * d) + RAD * lon - c.ra, phi = RAD * lat;
+    return {
+      alt: Math.asin(Math.sin(phi) * Math.sin(c.dec) + Math.cos(phi) * Math.cos(c.dec) * Math.cos(H)),
+      az: Math.atan2(Math.sin(H), Math.cos(H) * Math.sin(phi) - Math.tan(c.dec) * Math.cos(phi)),
+    };
+  }
+  /* phase: 0 new → 0.25 first quarter → 0.5 full → 0.75 last quarter */
+  function moonIllum(s, m){
+    const sd = 149598000;
+    const phi = Math.acos(Math.sin(s.dec) * Math.sin(m.dec) + Math.cos(s.dec) * Math.cos(m.dec) * Math.cos(s.ra - m.ra));
+    const inc = Math.atan2(sd * Math.sin(phi), m.dist - sd * Math.cos(phi));
+    const ang = Math.atan2(Math.cos(s.dec) * Math.sin(s.ra - m.ra), Math.sin(s.dec) * Math.cos(m.dec) - Math.cos(s.dec) * Math.sin(m.dec) * Math.cos(s.ra - m.ra));
+    return { fraction: (1 + Math.cos(inc)) / 2, phase: 0.5 + 0.5 * inc * (ang < 0 ? -1 : 1) / Math.PI };
+  }
+
+  /* ---------- the sky clock (real time, or a ?time= / ?timelapse= preview) ---------- */
+  const T0 = performance.now(), LAPSE = +Q.get('timelapse') || 1;
+  let SIM_BASE = null;
+  if (Q.has('time') || Q.has('date') || LAPSE !== 1) {
+    const dt = Q.has('date') ? new Date(Q.get('date') + 'T12:00') : new Date();
+    if (Q.has('time')) { const [hh, mm] = Q.get('time').split(':').map(Number); dt.setHours(hh || 0, mm || 0, 0, 0); }
+    SIM_BASE = isNaN(dt) ? Date.now() : dt.getTime();
+  }
+  const skyNow = () => SIM_BASE === null ? Date.now() : SIM_BASE + (performance.now() - T0) * LAPSE;
+
+  /* ---------- environment state ---------- */
+  const ENV = {
+    lat: 0, lon: 0, latT: 0, lonT: 0, city: '',
+    sunAlt: 30, sunAz: 0, moonAlt: -10, moonAz: 0, moonPhase: 0.5, moonFrac: 1,
+    morning: 0.5,                     // 1 = sun east of the meridian (dawn palette), 0 = west (dusk)
+    sunX: 160, sunY: 30, moonX: 60, moonY: 30, visL: 0, visR: W,
+    /* weather — eased toward ENV.W (the latest reading) */
+    cloud: 0.25, rain: 0, drizzle: 0, shower: 0, snow: 0, fog: 0, storm: 0, wind: 0.15, snowCover: 0, frost: 0,
+    temp: 16, hum: 60,
+    W: null,
+  };
+  window.ENV = ENV;
+  const WX_KEYS = ['cloud', 'rain', 'drizzle', 'shower', 'snow', 'fog', 'storm', 'wind', 'snowCover', 'frost'];
+  const WX_FAIR = { cloud: 0.25, rain: 0, drizzle: 0, shower: 0, snow: 0, fog: 0, storm: 0, wind: 0.15, snowCover: 0, frost: 0, temp: 16, hum: 60 };
+  const WX_PRESETS = {
+    clear: { cloud: 0 }, partly: { cloud: 0.42 }, cloudy: { cloud: 0.8 }, overcast: { cloud: 1 },
+    fog: { cloud: 0.6, fog: 0.9, hum: 98 },
+    drizzle: { cloud: 0.92, rain: 0.24, drizzle: 1, hum: 92 },
+    rain: { cloud: 1, rain: 0.62, hum: 95 },
+    showers: { cloud: 0.5, rain: 0.42, shower: 1, hum: 85 },
+    storm: { cloud: 1, rain: 0.9, storm: 1, wind: 0.65, hum: 95 },
+    snow: { cloud: 1, snow: 0.6, snowCover: 1, temp: -2, hum: 90 },
+    frost: { cloud: 0.08, frost: 1, temp: -4, hum: 80 },
+  };
+  /* WMO weather codes (Open-Meteo `weather_code`) → what falls from the sky */
+  const WMO = {
+    45: { fog: 0.85 }, 48: { fog: 0.9, frost: 1 },
+    51: { rain: 0.16, drizzle: 1 }, 53: { rain: 0.24, drizzle: 1 }, 55: { rain: 0.34, drizzle: 1 },
+    56: { rain: 0.2, drizzle: 1, frost: 1 }, 57: { rain: 0.32, drizzle: 1, frost: 1 },
+    61: { rain: 0.38 }, 63: { rain: 0.6 }, 65: { rain: 0.85 }, 66: { rain: 0.4, frost: 1 }, 67: { rain: 0.75, frost: 1 },
+    71: { snow: 0.35 }, 73: { snow: 0.6 }, 75: { snow: 0.9 }, 77: { snow: 0.3 },
+    80: { rain: 0.4, shower: 1 }, 81: { rain: 0.62, shower: 1 }, 82: { rain: 0.9, shower: 1 },
+    85: { snow: 0.5, shower: 1 }, 86: { snow: 0.85, shower: 1 },
+    95: { rain: 0.8, storm: 0.8 }, 96: { rain: 0.85, storm: 1 }, 99: { rain: 0.9, storm: 1 },
+  };
+  function readWeather(c){
+    const num = (v, dflt) => (typeof v === 'number' && isFinite(v)) ? v : dflt;
+    const w = Object.assign({}, WX_FAIR, WMO[c.weather_code | 0] || {});
+    w.cloud = clamp01(num(c.cloud_cover, 25) / 100);
+    if ((w.rain || w.snow) && !w.shower) w.cloud = Math.max(w.cloud, 0.9);
+    if (w.storm) w.cloud = 1;
+    w.wind = clamp01(num(c.wind_speed_10m, 7) / 45);
+    w.temp = num(c.temperature_2m, 16);
+    w.hum = num(c.relative_humidity_2m, 60);
+    const vis = num(c.visibility, 30000);
+    w.fog = Math.max(w.fog, vis < 1000 ? 0.8 : vis < 4000 ? 0.35 : 0);
+    w.snowCover = Math.max(clamp01(num(c.snow_depth, 0) / 0.03), w.snow ? 0.6 + 0.4 * w.snow : 0);
+    if (w.temp <= 0 && !w.snow) w.frost = 1;
+    return w;
+  }
+
+  /* ---------- where is the visitor? ---------- */
+  /* Before any network answer: the timezone's standard-time offset gives the
+     longitude, its region a rough latitude — enough for a believable sky. */
+  function guessLocation(){
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
+    const y = new Date().getFullYear();
+    const std = Math.max(new Date(y, 0, 1).getTimezoneOffset(), new Date(y, 6, 1).getTimezoneOffset());
+    const south = /^(Australia|Antarctica|Pacific\/(Auckland|Chatham|Fiji|Tongatapu|Noumea)|America\/(Argentina|Sao_Paulo|Santiago|Montevideo|Asuncion|Lima|La_Paz)|Africa\/(Johannesburg|Maputo|Harare|Windhoek|Lusaka|Gaborone)|Indian\/(Mauritius|Reunion))/.test(tz);
+    const lat = south ? -30 : /^Europe/.test(tz) ? 48 : /^America/.test(tz) ? 38 : /^Asia/.test(tz) ? 30 : /^Africa/.test(tz) ? 8 : 35;
+    return { lat, lon: Math.max(-180, Math.min(180, -std / 4)) };
+  }
+  async function fetchJSON(url, ms = 8000){
+    const ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), ms);
+    try {
+      const r = await fetch(url, { signal: ctl.signal });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return await r.json();
+    } finally { clearTimeout(timer); }
+  }
+  /* Precise position ONLY if the visitor already granted it — never prompt. */
+  async function grantedCoords(){
+    try {
+      if (!navigator.permissions || !navigator.geolocation) return null;
+      if ((await navigator.permissions.query({ name: 'geolocation' })).state !== 'granted') return null;
+      return await new Promise(res => navigator.geolocation.getCurrentPosition(
+        p => res({ lat: p.coords.latitude, lon: p.coords.longitude }), () => res(null), { maximumAge: 3600e3, timeout: 8000 }));
+    } catch { return null; }
+  }
+  const OM_CURRENT = 'temperature_2m,relative_humidity_2m,precipitation,weather_code,cloud_cover,wind_speed_10m,snow_depth,visibility';
+  async function fetchSky(){
+    let at = (Q.has('lat') && Q.has('lon')) ? { lat: +Q.get('lat'), lon: +Q.get('lon') } : await grantedCoords();
+    try {   // our proxy: the host's IP-geo (or an IP lookup) + Open-Meteo, in one call
+      const s = await fetchJSON('/api/weather' + (at ? `?lat=${at.lat}&lon=${at.lon}` : ''));
+      if (typeof s.lat === 'number' && s.current) return s;
+    } catch { /* static hosting / offline proxy: ask the same services directly */ }
+    if (!at) {
+      const g = await fetchJSON('https://get.geojs.io/v1/ip/geo.json');
+      at = { lat: +g.latitude, lon: +g.longitude, city: g.city || '' };
+    }
+    const om = await fetchJSON(`https://api.open-meteo.com/v1/forecast?latitude=${at.lat.toFixed(3)}&longitude=${at.lon.toFixed(3)}&current=${OM_CURRENT}`);
+    return { lat: at.lat, lon: at.lon, city: at.city || '', current: om.current };
+  }
+  const SKY_CACHE = 'wiseToad.sky';
+  let lastSkyFetch = 0;
+  async function refreshSky(){
+    lastSkyFetch = Date.now();
+    try {
+      const s = await fetchSky();
+      if (!isFinite(s.lat) || !isFinite(s.lon)) return;
+      if (!(Q.has('lat') && Q.has('lon'))) { ENV.latT = s.lat; ENV.lonT = s.lon; }
+      ENV.city = s.city || '';
+      if (!WX_PRESETS[Q.get('weather')]) ENV.W = readWeather(s.current || {});
+      try { localStorage.setItem(SKY_CACHE, JSON.stringify({ lat: s.lat, lon: s.lon, city: s.city, current: s.current, at: Date.now() })); } catch {}
+    } catch { /* offline: the clock still drives the sky; keep the last weather */ }
+  }
+
+  /* ---------- sky → screen ----------
+     The viewer faces the equator (south in the northern hemisphere, north in
+     the southern), so the sun rises on the left and sets on the right. On
+     desktop the arc is squeezed into the open sky LEFT of the toad (±130° of
+     azimuth → x 12..212), so sunrises and sunsets are never hidden behind
+     him; on portrait phones only the middle of the scene is visible, so the
+     arc spans that band instead. */
+  function visRange(){
+    if (!MQ.matches) return [0, W];
+    const sceneW = 0.95 * innerHeight * W / H;
+    const half = Math.min(W / 2, (innerWidth / sceneW) * W / 2);
+    return [W / 2 - half, W / 2 + half];
+  }
+  function skyXY(altDeg, az){
+    let a = az;
+    if (ENV.lat < 0) a = a > 0 ? a - Math.PI : a + Math.PI;     // southern viewers face north
+    const mob = MQ.matches;
+    const cx = mob ? (ENV.visL + ENV.visR) / 2 : 112, span = mob ? (ENV.visR - ENV.visL) * 0.75 : 138;
+    const hy = YH - 5;
+    const y = altDeg >= 0 ? hy - Math.pow(altDeg / 90, 0.72) * (hy - 12) : hy - altDeg * 2.2;
+    return [cx + (a / Math.PI) * span, y];
+  }
+  function updateSkyBodies(){
+    [ENV.visL, ENV.visR] = visRange();
+    const d = toDays(skyNow());
+    const sc = sunCoords(d), mc = moonCoords(d);
+    const sh = horizonPos(sc, d, ENV.lat, ENV.lon), mh = horizonPos(mc, d, ENV.lat, ENV.lon);
+    const ill = moonIllum(sc, mc);
+    ENV.sunAlt = sh.alt / RAD; ENV.sunAz = sh.az;
+    ENV.moonAlt = mh.alt / RAD; ENV.moonAz = mh.az;
+    ENV.moonPhase = ill.phase; ENV.moonFrac = ill.fraction;
+    ENV.morning = clamp01(0.5 - 1.6 * Math.sin(sh.az));
+    [ENV.sunX, ENV.sunY] = skyXY(ENV.sunAlt, sh.az);
+    [ENV.moonX, ENV.moonY] = skyXY(ENV.moonAlt, mh.az);
+  }
+
+  /* ---------- daylight colours of everything on the ground ----------
+     buildPalette() lights these: colour × key light + ambient, then haze for
+     distance, snow on top. Indices match GCOLS / FCOLS. */
+  const ALB = {
+    tD: [40, 88, 56], tM: [72, 134, 80], tL: [98, 162, 96], tB: [110, 176, 104], tE: [8, 12, 10],
+    tSpot: [48, 98, 60], tBelly: [128, 182, 108], tBelly2: [148, 196, 122], tWart: [62, 118, 72], tLid: [30, 70, 44],
+    hillFar: [70, 112, 80], hillNear: [56, 98, 62],
+    treeA: [36, 72, 40], treeB: [52, 92, 50], treeC: [28, 56, 32],
+    fencePost: [120, 92, 62], fenceRail: [140, 108, 74], fenceDark: [86, 64, 44],
+    stem: [62, 118, 52], grassTip: [190, 226, 128],
+    grFar: [96, 140, 72], grNear: [46, 90, 38],
+    snow: [236, 242, 252], frost: [214, 228, 246],
+    grass: [[74, 128, 56], [84, 140, 60], [96, 154, 66], [110, 170, 74], [60, 108, 48]],
+    flowers: [[[244, 244, 255], [242, 200, 76]], [[242, 204, 80], [204, 140, 44]], [[222, 140, 206], [242, 210, 106]],
+              [[150, 138, 236], [242, 210, 106]], [[232, 96, 90], [242, 200, 76]], [[255, 255, 255], [204, 140, 44]]],
+  };
+
+  /* ---------- the palette timeline, keyed by sun elevation (degrees) ----------
+     zen/top/mid/hz: sky gradient (mobile zenith, scene top, y≈58, horizon)
+     glow/glowA:     the bright patch of sky around the sun
+     light/amb/sat:  key-light multiplier, ambient fill, saturation for ALB
+     sun/sunE:       sun disk core / lower rim
+     cBody/cShade/cHi: cloud body, underside, sunlit crown
+     Dawn and dusk differ (dawn is cooler, pinker, more pastel), so evening
+     and morning have their own twilight keys; day and night are shared. */
+  const K_DAY = { el: 50, zen: [34, 90, 188], top: [58, 126, 216], mid: [110, 170, 232], hz: [198, 222, 242], glow: [255, 252, 236], glowA: 0.2,
+    light: [1.02, 1, 0.96], amb: [12, 16, 28], sat: 1, sun: [255, 254, 242], sunE: [255, 244, 206], cBody: [240, 244, 252], cShade: [192, 206, 230], cHi: [255, 255, 255] };
+  const K_AFT = { el: 25, zen: [42, 96, 184], top: [68, 132, 212], mid: [120, 174, 228], hz: [212, 226, 236], glow: [255, 244, 212], glowA: 0.26,
+    light: [1, 0.96, 0.88], amb: [12, 14, 24], sat: 1, sun: [255, 250, 232], sunE: [255, 236, 190], cBody: [242, 243, 246], cShade: [196, 204, 226], cHi: [255, 255, 252] };
+  const K_NIGHT = { el: -14, zen: [3, 4, 16], top: [14, 16, 48], mid: [32, 32, 76], hz: [64, 60, 104], glow: [90, 96, 150], glowA: 0,
+    light: [0.3, 0.4, 0.46], amb: [5, 7, 18], sat: 0.8, sun: [255, 150, 90], sunE: [255, 100, 60], cBody: [64, 72, 116], cShade: [48, 54, 92], cHi: [84, 94, 140] };
+  const KF_EVE = [K_DAY, K_AFT,
+    { el: 11, zen: [46, 88, 168], top: [80, 126, 198], mid: [152, 172, 210], hz: [244, 214, 170], glow: [255, 210, 140], glowA: 0.4,
+      light: [1, 0.87, 0.68], amb: [14, 12, 22], sat: 1.05, sun: [255, 242, 200], sunE: [255, 216, 150], cBody: [255, 238, 214], cShade: [222, 188, 172], cHi: [255, 247, 230] },
+    { el: 4, zen: [40, 64, 136], top: [72, 98, 168], mid: [178, 150, 172], hz: [255, 188, 118], glow: [255, 168, 88], glowA: 0.55,
+      light: [1, 0.76, 0.54], amb: [18, 16, 32], sat: 1.1, sun: [255, 222, 150], sunE: [255, 168, 96], cBody: [240, 172, 150], cShade: [255, 192, 124], cHi: [255, 216, 184] },
+    { el: -0.5, zen: [30, 40, 100], top: [62, 60, 128], mid: [178, 98, 128], hz: [255, 140, 76], glow: [255, 118, 60], glowA: 0.7,
+      light: [0.84, 0.56, 0.44], amb: [22, 16, 40], sat: 1.1, sun: [255, 184, 110], sunE: [255, 112, 70], cBody: [176, 92, 118], cShade: [255, 148, 92], cHi: [226, 124, 136] },
+    { el: -4, zen: [18, 22, 62], top: [36, 38, 96], mid: [100, 66, 128], hz: [226, 118, 96], glow: [240, 108, 80], glowA: 0.5,
+      light: [0.42, 0.37, 0.48], amb: [12, 13, 34], sat: 0.92, sun: [255, 150, 90], sunE: [255, 100, 60], cBody: [94, 62, 112], cShade: [212, 104, 100], cHi: [126, 84, 132] },
+    { el: -8, zen: [8, 10, 36], top: [20, 24, 66], mid: [46, 46, 104], hz: [118, 84, 132], glow: [170, 96, 120], glowA: 0.22,
+      light: [0.33, 0.37, 0.5], amb: [8, 10, 28], sat: 0.84, sun: [255, 150, 90], sunE: [255, 100, 60], cBody: [62, 62, 106], cShade: [80, 62, 102], cHi: [84, 84, 128] },
+    K_NIGHT];
+  const KF_MORN = [K_DAY, K_AFT,
+    { el: 11, zen: [48, 96, 178], top: [84, 140, 212], mid: [146, 188, 228], hz: [234, 230, 216], glow: [255, 236, 196], glowA: 0.34,
+      light: [1, 0.93, 0.8], amb: [12, 14, 24], sat: 1.03, sun: [255, 248, 220], sunE: [255, 226, 170], cBody: [255, 250, 246], cShade: [214, 216, 232], cHi: [255, 255, 255] },
+    { el: 4, zen: [44, 78, 150], top: [88, 124, 190], mid: [186, 184, 212], hz: [255, 216, 168], glow: [255, 222, 160], glowA: 0.5,
+      light: [1, 0.82, 0.64], amb: [16, 14, 26], sat: 1.05, sun: [255, 234, 170], sunE: [255, 190, 120], cBody: [255, 232, 218], cShade: [230, 196, 200], cHi: [255, 246, 238] },
+    { el: -0.5, zen: [38, 56, 122], top: [76, 94, 162], mid: [202, 156, 186], hz: [255, 188, 138], glow: [255, 190, 132], glowA: 0.65,
+      light: [0.88, 0.66, 0.56], amb: [20, 18, 40], sat: 1.06, sun: [255, 206, 140], sunE: [255, 140, 96], cBody: [222, 164, 178], cShade: [255, 204, 152], cHi: [252, 218, 214] },
+    { el: -4, zen: [24, 32, 82], top: [48, 58, 124], mid: [128, 110, 172], hz: [244, 166, 152], glow: [255, 176, 166], glowA: 0.45,
+      light: [0.46, 0.42, 0.52], amb: [12, 13, 34], sat: 0.92, sun: [255, 170, 120], sunE: [255, 120, 90], cBody: [130, 106, 156], cShade: [246, 162, 156], cHi: [168, 140, 186] },
+    { el: -8, zen: [10, 12, 40], top: [24, 28, 74], mid: [56, 56, 118], hz: [122, 102, 154], glow: [170, 140, 190], glowA: 0.22,
+      light: [0.36, 0.38, 0.52], amb: [8, 9, 26], sat: 0.84, sun: [255, 170, 120], sunE: [255, 120, 90], cBody: [66, 68, 112], cShade: [86, 76, 122], cHi: [90, 92, 136] },
+    K_NIGHT];
+  function lerpKF(a, b, t){
+    const o = {};
+    for (const k in a) { const va = a[k], vb = b[k]; o[k] = Array.isArray(va) ? mixC(va, vb, t) : va + (vb - va) * t; }
+    return o;
+  }
+  function kfAt(list, el){
+    if (el >= list[0].el) return list[0];
+    for (let i = 1; i < list.length; i++)
+      if (el >= list[i].el) return lerpKF(list[i - 1], list[i], (list[i - 1].el - el) / (list[i - 1].el - list[i].el));
+    return list[list.length - 1];
+  }
+
+  /* ---------- PAL: everything the draw functions read, rebuilt ~4×/s ---------- */
+  const SKY_N = YH + 181;            // sky rows for world-y -180 (mobile zenith) .. YH (horizon)
+  const MID_Y = 58;
+  const PAL = { sky: new Array(SKY_N), field: new Array(H - YH), cloud: {}, bg: '' };
+  const skyBuf = new Float32Array(SKY_N * 3), skyTmp = new Float32Array(SKY_N * 3);
+  function buildSkyRows(zen, top, mid, hz){
+    for (let i = 0; i < SKY_N; i++) {
+      const wy = i - 180;
+      const c = wy < 0 ? mixC(top, zen, Math.min(1, -wy / 170))
+              : wy < MID_Y ? mixC(top, mid, wy / MID_Y)
+              : mixC(mid, hz, Math.pow((wy - MID_Y) / (YH - MID_Y), 1.35));
+      skyBuf[i * 3] = c[0]; skyBuf[i * 3 + 1] = c[1]; skyBuf[i * 3 + 2] = c[2];
+    }
+    /* box-blur the stop curve so no stop leaves a kink (incl. the mobile seam at wy 0) */
+    const R = 10;
+    for (let i = 0; i < SKY_N; i++) for (let k = 0; k < 3; k++) {
+      let s = 0;
+      for (let j = -R; j <= R; j++) s += skyBuf[Math.min(SKY_N - 1, Math.max(0, i + j)) * 3 + k];
+      skyTmp[i * 3 + k] = s / (2 * R + 1);
+    }
+    for (let i = 0; i < SKY_N; i++) PAL.sky[i] = css([skyTmp[i * 3], skyTmp[i * 3 + 1], skyTmp[i * 3 + 2]]);
+  }
+
+  const THEME_META = document.querySelector('meta[name="theme-color"]');
+  function buildPalette(){
+    const el = ENV.sunAlt;
+    const k = lerpKF(kfAt(KF_EVE, el), kfAt(KF_MORN, el), ENV.morning);
+    const dayF = smooth(-6, 8, el), nightF = 1 - smooth(-14, -5, el);
+    const moonB = ENV.moonFrac * smooth(-2, 12, ENV.moonAlt);         // how much moonlight there is
+    const o = smooth(0.5, 1, ENV.cloud);                                // overcast: the sky becomes a deck
+    const { fog, rain, storm, snow, snowCover: sc } = ENV;
+    PAL.dayF = dayF; PAL.nightF = nightF; PAL.o = o;
+
+    /* sky: clear-sky stops, then the cloud deck and fog wash over them */
+    let { zen, top, mid, hz } = k;
+    const lift = mulC([3, 5, 12], moonB * nightF);                     // a bright moon lifts the night sky
+    top = addC(top, lift); mid = addC(mid, lift); hz = addC(hz, mulC(lift, 0.6));
+    const deckL = (lum(mid) * 0.5 + lum(hz) * 0.5) * (1 - 0.3 * rain - 0.38 * storm - 0.3 * nightF - 0.14 * snow);
+    let deck = mixC([deckL * 0.93, deckL * 0.97, deckL * 1.05 + 3], [deckL * 0.78, deckL * 0.86, deckL * 1.35 + 4], nightF);
+    deck = mixC(deck, [deckL * 0.96, deckL * 0.98, deckL * 1.01], rain * (1 - nightF));    // rain greys the day
+    deck = mixC(deck, [deckL * 0.8, deckL * 0.92, deckL * 0.96], storm * 0.5);         // storm light turns slate-teal
+    const keep = 0.2 - 0.12 * rain;
+    const wash = (s, kp) => mixC(s, mixC(deck, s, kp), o * 0.92);
+    zen = wash(zen, keep); top = wash(top, keep); mid = wash(mid, keep); hz = wash(hz, keep + 0.3 * storm);   // light breaking under a storm
+    const fogL = lum(k.hz) * 0.8 * (1 - 0.25 * o) + 14;
+    const fogC = [fogL * 0.96, fogL * 0.99, fogL * 1.04];
+    zen = mixC(zen, fogC, fog * 0.5); top = mixC(top, fogC, fog * 0.62); mid = mixC(mid, fogC, fog * 0.8); hz = mixC(hz, fogC, fog * 0.92);
+    buildSkyRows(zen, top, mid, hz);
+    PAL.hz = hz;
+    PAL.fogRGB = mixC(fogC, k.glow, k.glowA * 0.35 * (1 - o));        // dawn mist catches the sunrise
+
+    /* light: weather dims and greys it; a bright moon lifts the night */
+    let lk = (1 - 0.45 * o - 0.12 * rain - 0.12 * storm - 0.18 * fog) * (1 + nightF * (moonB * 0.35 - 0.1));
+    lk += (Math.max(lk, 0.62) - lk) * nightF;                       // dark nights stay legible
+    const lg = (k.light[0] + k.light[1] + k.light[2]) / 3;
+    const light = mulC(mixC(k.light, [lg, lg, lg], Math.min(1, o * 0.6 + fog * 0.3)), lk);
+    const amb = addC(k.amb, mulC(deck, 0.07 * o * dayF));
+    const sat = k.sat * (1 - 0.3 * o - 0.25 * fog);
+    const lit = (c, gain = 1) => {
+      const r = [c[0] * light[0] * gain + amb[0], c[1] * light[1] * gain + amb[1], c[2] * light[2] * gain + amb[2]];
+      const L = lum(r);
+      return [L + (r[0] - L) * sat, L + (r[1] - L) * sat, L + (r[2] - L) * sat];
+    };
+    /* distance haze: toward the horizon by day; toward the deeper mid-sky
+       when the sun is low, so hills read as backlit silhouettes at sunset */
+    const hazeK = Math.min(0.95, fog * 0.6 + rain * 0.18);
+    const hazeC = mixC(hz, mid, 0.55 * (1 - smooth(4, 20, el)) * (1 - fog));
+    const far = (c, h) => mixC(c, hazeC, Math.min(0.97, h + hazeK * (1 - h)));
+
+    /* the ground */
+    const snowL = lit(ALB.snow, 1 + nightF * 0.5 + 0.4 * o * dayF);
+    const snowSh = mixC(snowL, mulC(snowL, 0.8), 0.6);
+    PAL.snow = css(snowL); PAL.snowSh = css(mixC(snowSh, [snowSh[0] * 0.92, snowSh[1] * 0.96, snowSh[2] * 1.06], 1));
+    PAL.snowFar = css(far(snowL, 0.3));
+    PAL.drift = cssA(snowSh, 0.55);
+    const fieldFar = mixC(far(lit(ALB.grFar), 0.32), far(snowL, 0.3), sc * 0.95);
+    const fieldNear = mixC(mixC(lit(ALB.grNear), lit(ALB.frost), ENV.frost * 0.22), mixC(snowL, snowSh, 0.25), sc * 0.95);
+    for (let y = YH; y < H; y++) PAL.field[y - YH] = css(mixC(fieldFar, fieldNear, (y - YH) / (H - YH)));
+    const toadGain = 1 + nightF * 0.18;                                 // the hero catches a little more moonlight
+    for (const key of ['tD', 'tM', 'tL', 'tB', 'tE', 'tSpot', 'tBelly', 'tBelly2', 'tWart', 'tLid']) P[key] = css(lit(ALB[key], toadGain));
+    P.hillFar = css(mixC(far(lit(ALB.hillFar), 0.55), far(snowL, 0.5), sc * 0.85));
+    P.hillNear = css(mixC(far(lit(ALB.hillNear), 0.4), far(snowL, 0.35), sc * 0.85));
+    P.hillRim = cssA(k.glow, k.glowA * 0.55 * (1 - o) * (1 - fog));
+    TH.treeA = css(far(lit(ALB.treeA), 0.3)); TH.treeB = css(far(lit(ALB.treeB), 0.3)); TH.treeC = css(far(lit(ALB.treeC), 0.32));
+    TH.fencePost = css(far(lit(ALB.fencePost), 0.22)); TH.fenceRail = css(far(lit(ALB.fenceRail), 0.22)); TH.fenceDark = css(far(lit(ALB.fenceDark), 0.22));
+    TH.stem = css(lit(ALB.stem));
+    TH.grassTip = css(mixC(lit(ALB.grassTip), lit(ALB.frost, 1.3), ENV.frost * 0.85));
+    TH.horizonGlow = cssA(mixC(hz, k.glow, k.glowA * 0.4), 0.22 + 0.12 * k.glowA);
+    TH.fieldPatch = cssA(mixC([120, 150, 200], [255, 246, 214], dayF), 0.05 + 0.03 * dayF * (1 - o));
+    ALB.grass.forEach((c, i) => { GCOLS[i] = css(lit(c)); });
+    const fGain = 1 + nightF * 0.7;                                     // pale petals glow faintly under the moon
+    ALB.flowers.forEach((f, i) => { FCOLS[i] = [css(lit(f[0], fGain)), css(lit(f[1], fGain))]; });
+
+    /* sky bodies + sky life */
+    PAL.sunVis = (1 - o * 0.96) * (1 - fog * 0.55);
+    PAL.sunCore = css(k.sun); PAL.sunEdge = css(k.sunE); PAL.sunRGB = k.sun;
+    PAL.glow = k.glow; PAL.glowA = k.glowA * (1 - o * 0.82) * (1 - fog * 0.6);
+    PAL.glowWide = 1 + 1.4 * (1 - smooth(5, 30, el));
+    PAL.glowCore = 0.55 * smooth(-5, -0.5, el) * (1 - smooth(4, 12, el)) * (1 - o * 0.85) * (1 - fog * 0.6);
+    PAL.moonVis = (1 - o * 0.9) * (1 - fog * 0.65);
+    PAL.moonB = moonB;
+    PAL.starVis = nightF * (1 - smooth(0.55, 0.95, ENV.cloud)) * (1 - fog * 0.9);
+    PAL.mwVis = nightF * nightF * (1 - smooth(0.2, 0.7, ENV.cloud)) * (1 - 0.9 * moonB) * (1 - fog);
+    PAL.rays = smooth(-2, 2, el) * (1 - smooth(14, 24, el)) * smooth(0.1, 0.3, ENV.cloud) * (1 - smooth(0.7, 0.92, ENV.cloud)) * (1 - fog);
+    PAL.rainbow = smooth(2, 6, el) * (1 - smooth(36, 42, el)) * smooth(0.05, 0.2, rain) * (1 - smooth(0.6, 0.85, rain))
+                * (1 - smooth(0.7, 0.92, ENV.cloud)) * (1 - snow) * (1 - fog);
+    PAL.bird = css(mixC(top, [12, 14, 22], 0.72));
+    PAL.shadowA = dayF * (1 - o) * smooth(4, 18, el) * 0.13;
+
+    /* clouds: palette colours, swallowed by the deck as it thickens; repaint
+       the cloud sprites only when the (quantised) colours actually change */
+    const q = c => css(c.map(v => Math.round(v / 3) * 3));
+    const fogMix = c => mixC(c, fogC, fog * 0.5);
+    const wet = Math.max(rain, storm, snow * 0.7);                     // rain clouds hang darker than the deck
+    const cb = q(fogMix(mixC(k.cBody, mulC(deck, 1.06 - 0.2 * wet), o * 0.8)));
+    const cs = q(fogMix(mixC(k.cShade, mulC(deck, 0.8 - 0.12 * wet), o * 0.85)));
+    const chi = q(fogMix(mixC(k.cHi, mulC(deck, 1.16 - 0.14 * wet), o * 0.7)));
+    if (cb !== PAL.cloud.body || cs !== PAL.cloud.shade || chi !== PAL.cloud.hi) {
+      PAL.cloud = { body: cb, shade: cs, hi: chi };
+      CLOUDS.forEach(paintCloud);
+    }
+
+    /* precipitation */
+    const dropC = mixC(lit([214, 224, 240], 1.15 + nightF), [210, 220, 240], 0.35);
+    PAL.drops = [0.34, 0.5, 0.7].map(a => cssA(dropC, a * (1 + 0.25 * nightF)));
+    PAL.flake = css(lit(ALB.snow, 1 + nightF * 0.9));
+    PAL.flakeFar = cssA(lit(ALB.snow, 1 + nightF * 0.9), 0.6);
+
+    /* the toad: rim light from the key light, a shadow as strong as the light is direct */
+    const rimC = mixC(mixC([255, 246, 220], k.glow, 0.45), [80, 120, 200], nightF);
+    PAL.rim = [0.18, 0.1, 0.06].map(a => cssA(rimC, a * (1 + 0.3 * dayF * (1 - o))));
+    const lowSun = smooth(-3, 2, el) * (1 - smooth(12, 24, el));
+    PAL.sideRimA = Math.max(lowSun * 0.5, 0.22 * moonB * nightF) * (1 - o) * (1 - fog);
+    PAL.sideRim = cssA(lowSun > moonB * nightF * 0.5 ? mixC(k.glow, [255, 236, 200], 0.3) : [170, 190, 240], PAL.sideRimA);
+    const shK = 0.55 + 0.45 * (1 - o) * Math.max(dayF, moonB * nightF);
+    PAL.toadSh = [cssA([0, 0, 0], 0.3 * shK), cssA([0, 0, 0], 0.15 * shK), cssA([0, 0, 0], 0.18 * shK), cssA([0, 0, 0], 0.08 * shK)];
+    const low = smooth(0, 4, el) * (1 - smooth(10, 22, el)) * (1 - o);  // long golden-hour shadows
+    PAL.shadowDX = Math.round(low * 14) * (ENV.sunX < toadCX() ? 1 : -1);
+
+    /* ambient: vignette, the key light's wash, golden-hour light leak */
+    const vig = mixC([24, 30, 40], [6, 8, 24], nightF);
+    const vk = 0.35 + 0.65 * nightF + 0.3 * storm;
+    PAL.vig = [cssA(vig, 0.32 * vk), cssA(vig, 0.22 * vk)];
+    const sunKey = el > -4;
+    PAL.washX = sunKey ? ENV.sunX : ENV.moonX; PAL.washY = sunKey ? ENV.sunY : ENV.moonY;
+    PAL.washC = sunKey ? k.glow : [150, 170, 235];
+    PAL.washA = sunKey ? (0.06 + 0.1 * smooth(-3, 3, el) * (1 - smooth(8, 20, el))) * dayF * (1 - o) : 0.07 * moonB * nightF * PAL.moonVis;
+    PAL.goldA = smooth(-2, 3, el) * (1 - smooth(10, 22, el)) * (1 - o) * 0.13;
+    PAL.firefly = (1 - smooth(-6, 0, el)) * smooth(6, 12, ENV.temp) * (1 - smooth(0.02, 0.2, rain)) * (1 - snow) * (1 - sc) * (1 - ENV.wind * 0.5);
+    PAL.motes = smooth(0, 4, el) * (1 - smooth(12, 22, el)) * (1 - o) * (1 - smooth(0.02, 0.15, rain)) * (1 - snow);
+    PAL.dew = smooth(-3, 2, el) * (1 - smooth(14, 24, el)) * smooth(0.55, 0.8, ENV.morning) * smooth(60, 88, ENV.hum)
+            * (1 - smooth(0.02, 0.15, rain)) * (1 - sc);
+    PAL.mist = Math.max(0, smooth(-9, -2, el) * (1 - smooth(5, 13, el)) * smooth(0.55, 0.8, ENV.morning) * (0.35 + 0.65 * smooth(70, 95, ENV.hum)) * 0.55 * (1 - o * 0.5));
+    PAL.bfly = smooth(6, 14, el) * smooth(10, 15, ENV.temp) * (1 - smooth(0.02, 0.1, rain)) * (1 - smooth(0.5, 0.8, ENV.wind)) * (1 - sc) * (1 - fog);
+
+    /* page chrome follows the sky (overscroll, mobile browser bars) */
+    const bg = PAL.sky[180];
+    if (bg !== PAL.bg) {
+      PAL.bg = bg;
+      document.documentElement.style.setProperty('--sky', bg);
+      if (THEME_META) THEME_META.content = bg;
+    }
+  }
+
+  /* ---------- clouds: pixel cumulus sprites, repainted when the light changes ----------
+     A separate RNG stream so the field layout above never shifts. Each cloud
+     has a coverage threshold: as cloud cover rises, more of them fade in
+     (c.a eases 0↔1 in updateEnv, so no cloud lingers half-transparent). */
+  const rng2 = mulberry(4242);
+  function cloudShape(s){
+    const w = Math.round((26 + rng2() * 26) * s), lobes = [];
+    const add = (u, r, lift) => lobes.push({ x: Math.round(u * w), y: -Math.round(r * lift), r: Math.max(2, Math.round(r)) });
+    const nb = Math.max(3, Math.round(w / 8));
+    for (let i = 0; i < nb; i++) add((i + 0.5) / nb, 2.5 + rng2() * 2.5 * s, 0.5);               // flat base
+    add(0.08 + rng2() * 0.16, (3.5 + rng2() * 2.5) * s, 0.75);                                    // shoulders
+    add(0.76 + rng2() * 0.16, (3.5 + rng2() * 2.5) * s, 0.75);
+    const nt = 1 + (rng2() < 0.65 ? 1 : 0) + (w > 48 && rng2() < 0.5 ? 1 : 0);
+    for (let i = 0; i < nt; i++) {                                                                 // towers + cauliflower bumps
+      const u = 0.28 + (nt > 1 ? i / (nt - 1) : 0.5) * 0.44 + (rng2() - 0.5) * 0.1, r = (5.5 + rng2() * 4.5) * s;
+      add(u, r, 0.95);
+      add(u + (rng2() - 0.5) * 0.18, r * 0.45, 3.4);                                              // bump poking over the tower top
+    }
+    let x0 = 1e9, x1 = -1e9, y0 = 1e9;
+    for (const L of lobes) { x0 = Math.min(x0, L.x - L.r); x1 = Math.max(x1, L.x + L.r); y0 = Math.min(y0, L.y - L.r); }
+    const sprite = document.createElement('canvas');
+    const ox = 2 - x0, oy = 2 - y0;                 // local (0,0) = left end of the flat base
+    sprite.width = x1 + ox + 2; sprite.height = oy + 3;
+    return { lobes, ox, oy, sprite };
+  }
+  function paintCloud(c){
+    const g = c.sprite.getContext('2d'), col = PAL.cloud;
+    g.clearRect(0, 0, c.sprite.width, c.sprite.height);
+    const passAt = (shrink, dx, dy, fill, maxY) => {
+      g.fillStyle = fill;
+      for (const L of c.lobes) {
+        const r = L.r - shrink;
+        if (r < 1) continue;
+        for (let yy = -r; yy <= r; yy++) {
+          const y = L.y + yy + dy;
+          if (y > maxY) continue;
+          const hw = Math.round(Math.sqrt(r * r - yy * yy));
+          g.fillRect(L.x + dx - hw + c.ox, y + c.oy, hw * 2 + 1, 1);
+        }
+      }
+    };
+    /* light from above-left: a 1px sunlit crown, body, and a shaded right rim + flat underside */
+    passAt(0, 0, 0, col.shade, 1);
+    passAt(1, -1, -1, col.hi, -1);
+    passAt(1, 0, 0, col.body, -1);
+  }
+  const CLOUDS = [];
+  cloudsA.forEach((c, i) => CLOUDS.push(Object.assign(cloudShape(c.s), { x: c.x, y: c.y, speed: c.speed, thr: [0.02, 0.12, 0.22, 0.32, 0.44, 0.56, 0.68][i] })));
+  cloudsT.forEach((c, i) => CLOUDS.push(Object.assign(cloudShape(c.s), { x: c.x, y: c.y - 180, speed: c.speed, thr: 0.05 + i * 0.1 })));
+  for (let i = 0; i < 11; i++) CLOUDS.push(Object.assign(cloudShape(0.8 + rng2() * 0.9), { x: rng2() * W | 0, y: (8 + rng2() * 52) | 0, speed: 1.1 + rng2() * 1.8, thr: 0.36 + rng2() * 0.56 }));
+  for (let i = 0; i < 6; i++) CLOUDS.push(Object.assign(cloudShape(0.9 + rng2() * 0.8), { x: rng2() * W | 0, y: -(16 + rng2() * 150) | 0, speed: 1 + rng2() * 1.6, thr: 0.4 + rng2() * 0.5 }));
+  for (let i = 0; i < 9; i++) CLOUDS.push(Object.assign(cloudShape(1.5 + rng2() * 0.6), { x: (i * (W + 110) / 9 + rng2() * 20) | 0, y: (3 + rng2() * 12) | 0, speed: 0.6 + rng2() * 0.6, thr: 0.74 + rng2() * 0.2 }));
+  CLOUDS.sort((a, b) => a.sprite.width - b.sprite.width);       // small (far) first
+
+  /* ---------- rain, snow, butterflies, fog banks (separate stream too) ---------- */
+  const DROPS = [], FLAKES = [];
+  for (let i = 0; i < 420; i++) DROPS.push({ x: rng2(), y: rng2(), land: rng2(), sp: rng2() });
+  for (let i = 0; i < 260; i++) FLAKES.push({ x: rng2(), y: rng2(), land: rng2(), sp: rng2(), ph: rng2() * 6.28, amp: rng2() });
+  const BFLY = [{ x: 64, ph: 0.3, c: [250, 248, 240] }, { x: 132, ph: 2.1, c: [250, 216, 92] }, { x: 196, ph: 4.2, c: [244, 150, 64] }];
+  const FOG_BACK = [{ y: YH - 3, h: 6, w: 150, sp: 1.2, x: 40 }, { y: YH + 3, h: 5, w: 190, sp: -0.7, x: 210 },
+                    { y: YH + 11, h: 7, w: 160, sp: 0.9, x: 120 }, { y: YH + 22, h: 8, w: 210, sp: -0.5, x: 280 }];
+  const FOG_FRONT = [{ y: 136, h: 12, w: 240, sp: 0.6, x: 60 }, { y: 160, h: 14, w: 300, sp: -0.4, x: 240 }, { y: 118, h: 9, w: 200, sp: 0.8, x: 330 }];
+
+  /* ---------- the Milky Way: painted once, faded in on clear moonless nights ---------- */
+  let MW = null;
+  function buildMilkyWay(){
+    const c = document.createElement('canvas');
+    c.width = W; c.height = SKY_N;                // world-y -180..YH, like PAL.sky
+    const g = c.getContext('2d'), img = g.createImageData(W, SKY_N), r = mulberry(99);
+    const NX = 48, NY = 37, grid = new Float32Array(NX * NY).map(() => r());
+    const noise = (x, y) => {
+      const gx = x / 8, gy = y / 8, ix = gx | 0, iy = gy | 0, fx = gx - ix, fy = gy - iy;
+      const a = grid[iy * NX + ix], b = grid[iy * NX + ix + 1], c2 = grid[(iy + 1) * NX + ix], d2 = grid[(iy + 1) * NX + ix + 1];
+      const sx = fx * fx * (3 - 2 * fx), sy = fy * fy * (3 - 2 * fy);
+      return a + (b - a) * sx + (c2 - a) * sy + (a - b - c2 + d2) * sx * sy;
+    };
+    /* a band rising from the lower left to the upper right, with a dark dust lane */
+    const x0 = 0, y0 = 86 + 180, x1 = W, y1 = -60 + 180, len = Math.hypot(x1 - x0, y1 - y0);
+    const nx = -(y1 - y0) / len, ny = (x1 - x0) / len;
+    for (let y = 0; y < SKY_N; y++) for (let x = 0; x < W; x++) {
+      const dn = ((x - x0) * nx + (y - y0) * ny) / 20;
+      let den = Math.exp(-dn * dn * 1.6) * (0.5 + 0.65 * noise(x, y));
+      den *= 1 - 0.6 * Math.exp(-Math.pow((dn - 0.12) * 3.2, 2)) * noise(x + 50, y);
+      let a = den * 0.26, cr = 190, cg = 196, cb = 236;
+      if (r() < den * 0.045) { a = 0.15 + r() * 0.35; cr = cg = 236; cb = 255; }  // dust of tiny stars
+      const i = (y * W + x) * 4;
+      img.data[i] = cr; img.data[i + 1] = cg; img.data[i + 2] = cb; img.data[i + 3] = a * 255;
+    }
+    g.putImageData(img, 0, 0);
+    MW = c;
+  }
+
+  /* ---------- start: right sky on frame one, then refine from the network ---------- */
+  function initSky(){
+    let cache = null;
+    try { cache = JSON.parse(localStorage.getItem(SKY_CACHE)); } catch {}
+    const fixed = Q.has('lat') && Q.has('lon');
+    const loc = fixed ? { lat: +Q.get('lat'), lon: +Q.get('lon') } : (cache && isFinite(cache.lat) ? cache : guessLocation());
+    ENV.lat = ENV.latT = loc.lat; ENV.lon = ENV.lonT = loc.lon;
+    const preset = WX_PRESETS[Q.get('weather')];
+    ENV.W = preset ? Object.assign({}, WX_FAIR, preset)
+          : (cache && cache.current && Date.now() - cache.at < 45 * 60e3) ? readWeather(cache.current) : Object.assign({}, WX_FAIR);
+    Object.assign(ENV, ENV.W, { W: ENV.W });
+    for (const c of CLOUDS) c.a = ENV.cloud > c.thr ? 1 : 0;
+    buildMilkyWay();
+    updateSkyBodies();
+    buildPalette();
+    if (!(fixed && preset)) refreshSky();
+    setInterval(() => { if (!document.hidden) refreshSky(); }, 15 * 60e3);
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden && Date.now() - lastSkyFetch > 10 * 60e3) refreshSky();
+    });
+  }
+
+  /* ---------- per-frame: ease the weather, tick the sky, schedule sky events ---------- */
+  function updateEnv(dt){
+    const k = Math.min(1, dt * 0.7);
+    for (const key of WX_KEYS) ENV[key] += (ENV.W[key] - ENV[key]) * (key === 'snowCover' ? Math.min(1, dt * 0.2) : k);
+    ENV.temp = ENV.W.temp; ENV.hum = ENV.W.hum;
+    ENV.lat += (ENV.latT - ENV.lat) * Math.min(1, dt * 1.2);
+    ENV.lon += (ENV.lonT - ENV.lon) * Math.min(1, dt * 1.2);
+    if (Math.abs(ENV.lonT - ENV.lon) > 180) ENV.lon = ENV.lonT;      // don't sweep the sky across the antimeridian
+    A.cloudT += dt * (0.5 + ENV.wind * 2.6);
+    for (const c of CLOUDS) c.a += ((ENV.cloud > c.thr ? 1 : 0) - c.a) * Math.min(1, dt * 0.6);   // clouds drift in/out whole
+    A.windX += dt * ENV.wind;
+    A.precipT += dt;
+    A.skyClock += dt;
+    if (A.skyClock >= 0.25) { A.skyClock = 0; updateSkyBodies(); buildPalette(); }
+
+    /* lightning: a flash, a flicker, a bolt */
+    if (ENV.storm > 0.15) {
+      A.nextBolt -= dt;
+      if (A.nextBolt <= 0) {
+        A.nextBolt = (2.5 + Math.random() * 8) / Math.max(0.4, ENV.storm);
+        A.flash = 1; A.flash2 = 0.1 + Math.random() * 0.12;
+        A.bolt = makeBolt(); A.boltT = 0.24;
+      }
+    }
+    if (A.flash2 > 0 && (A.flash2 -= dt) <= 0) A.flash = Math.max(A.flash, 0.7);
+    A.flash = Math.max(0, A.flash - dt * 3.2);
+    A.boltT = Math.max(0, A.boltT - dt);
+
+    /* a shooting star now and then on clear nights */
+    if (PAL.starVis > 0.5 && !A.shoot && (A.nextShoot -= dt) <= 0) {
+      A.nextShoot = 14 + Math.random() * 30;
+      A.shoot = { x: ENV.visL + Math.random() * (ENV.visR - ENV.visL), y: 6 + Math.random() * 30,
+                  dx: (Math.random() < 0.5 ? -1 : 1) * (70 + Math.random() * 50), dy: 28 + Math.random() * 20, t: 0 };
+    }
+    if (A.shoot && (A.shoot.t += dt) > 0.9) A.shoot = null;
+
+    /* a small flock crossing the sky in fair daylight */
+    const birdsOK = PAL.dayF > 0.3 && ENV.rain < 0.12 && ENV.storm < 0.1 && ENV.fog < 0.5 && ENV.snow < 0.3;
+    if (birdsOK && !A.birds && (A.nextBirds -= dt) <= 0) {
+      const dir = Math.random() < 0.5 ? -1 : 1;
+      A.nextBirds = 25 + Math.random() * 50;
+      A.birds = { x: dir > 0 ? ENV.visL - 20 : ENV.visR + 20, y: 16 + Math.random() * 34, dir, sp: 11 + Math.random() * 6, n: 3 + (Math.random() * 4 | 0) };
+    }
+    if (A.birds) {
+      A.birds.x += A.birds.dir * A.birds.sp * dt;
+      if (A.birds.x < ENV.visL - 60 || A.birds.x > ENV.visR + 60) A.birds = null;
+    }
+  }
+  /* strikes land well clear of the toad: left of him on desktop, near the edges on phones */
+  function makeBolt(){
+    const span = ENV.visR - ENV.visL, edge = Math.random() * span * 0.22;
+    let x = MQ.matches ? (Math.random() < 0.5 ? ENV.visL + 6 + edge : ENV.visR - 6 - edge) : 20 + Math.random() * 180;
+    let y = 8 + Math.random() * 10;
+    const pts = [[x, y]], end = YH - 6 - Math.random() * 14;
+    while (y < end) { y = Math.min(end, y + 3 + Math.random() * 5); x += (Math.random() - 0.5) * 8; pts.push([x, y]); }
+    const bi = 1 + (Math.random() * (pts.length - 2) | 0), branch = [pts[bi]];
+    let bx = pts[bi][0], by = pts[bi][1];
+    const side = Math.random() < 0.5 ? -1 : 1;
+    for (let i = 0; i < 3; i++) { by += 3 + Math.random() * 4; bx += side * (2 + Math.random() * 4); branch.push([bx, by]); }
+    return { pts, branch };
+  }
+  const flashCol = () => `rgba(222,228,255,${(A.flash * 0.38).toFixed(3)})`;
+  /* the toad's centre in scene x (on phones he stands mid-screen on his own canvas) */
+  const toadCX = () => MQ.matches ? W / 2 : S.toad.x + 35;
+
+  /* =================================================================
      ANIMATION STATE
      ================================================================= */
   const A = {
@@ -875,7 +1520,11 @@
     toadAwake: 0,        // 0 (closed) -> 1 (enlightened eyes open)
     mouthSpark: 0,       // 0 or 1 inspiration puff at mouth
     targetTw: TOAD_BW, targetTh: 110, requestedTh: 110, calcUTh: 12,
-    scaleY: 1, scroll: 0, scrollTarget: 0, maxScroll: 0
+    scaleY: 1, scroll: 0, scrollTarget: 0, maxScroll: 0,
+    /* living sky */
+    cloudT: 0, windX: 0, precipT: 0, skyClock: 0,
+    flash: 0, flash2: 0, bolt: null, boltT: 0, nextBolt: 2,
+    shoot: null, nextShoot: 8, birds: null, nextBirds: 6
   };
   window.A = A;
 
@@ -916,51 +1565,44 @@
   }
 
   /* =================================================================
-     DRAWING LAYERS — a peaceful grassy field under a blue sky
+     DRAWING LAYERS — a peaceful grassy field under the visitor's own sky
+     (colours come from PAL / P / TH / GCOLS / FCOLS, rebuilt by buildPalette)
      ================================================================= */
 
-  /* smooth gradient helper: lerp between two [r,g,b] colours */
-  function lerpC(a,b,t){ return `rgb(${(a[0]+(b[0]-a[0])*t)|0},${(a[1]+(b[1]-a[1])*t)|0},${(a[2]+(b[2]-a[2])*t)|0})`; }
-
-  /* ONE continuous sky gradient as a function of world-y: SKY_MID at the main
-     scene's top (worldY 0) → SKY_HZ at the horizon (worldY = YH), extended
-     linearly upward (negative worldY, used by the mobile #sceneTop) and clamped
-     to gamut. Both #scene and #sceneTop sample this, so there is no seam. */
-  function skyAt(wy){
-    const t=wy/YH, cl=v=>v<0?0:v>255?255:v|0;
-    return `rgb(${cl(SKY_MID[0]+(SKY_HZ[0]-SKY_MID[0])*t)},${cl(SKY_MID[1]+(SKY_HZ[1]-SKY_MID[1])*t)},${cl(SKY_MID[2]+(SKY_HZ[2]-SKY_MID[2])*t)})`;
+  /* soft elliptical glow (the low-res canvas quantises it to art pixels) */
+  function glowAt(x, y, r, sx, rgb, a){
+    if (a < 0.004) return;
+    G.save(); G.translate(x, y); G.scale(sx, 1);
+    const g = G.createRadialGradient(0, 0, 0, 0, 0, r);
+    g.addColorStop(0, cssA(rgb, a)); g.addColorStop(0.35, cssA(rgb, a * 0.45)); g.addColorStop(1, cssA(rgb, 0));
+    G.fillStyle = g; G.fillRect(-r, -r, r * 2, r * 2);
+    G.restore();
   }
 
-  /* ---------- 1. sky (gradient down to the hazy horizon) ---------- */
+  /* ---------- 1. sky (gradient down to the horizon) + the glow around the sun ---------- */
   function drawSky(){
-    for(let y=0;y<=YH;y++) rv(0,y,W,1,skyAt(y));
+    for (let y = 0; y <= YH; y++) rv(0, y, W, 1, PAL.sky[y + 180]);
+    drawSkyGlow(0);
+  }
+  /* yOff 0 = main scene, 180 = the mobile #sceneTop band above it */
+  function drawSkyGlow(yOff){
+    const y = Math.min(ENV.sunY, YH + 8) + yOff;
+    glowAt(ENV.sunX, y, 72, PAL.glowWide, PAL.glow, PAL.glowA);
+    glowAt(ENV.sunX, y, 28, 1.7, PAL.sunRGB, PAL.glowCore);      // hot core where the sun meets the horizon
   }
 
-  /* ---------- 2. moon — a pale crescent with a cool glow ---------- */
-  function drawMoon(cx,cy){
-    const tw=0.85+0.15*Math.sin(A.t*0.5);
-    /* soft cool halo */
-    rv(cx-16,cy-16,32,32,`rgba(170,188,236,${(0.045*tw).toFixed(3)})`);
-    rv(cx-11,cy-11,22,22,`rgba(190,206,240,${(0.06*tw).toFixed(3)})`);
-    rv(cx-8,cy-8,16,16,`rgba(206,220,248,${(0.09*tw).toFixed(3)})`);
-    const m='#e8ecf6', cut=`rgb(${SKY_MID[0]},${SKY_MID[1]},${SKY_MID[2]})`, cr='#bcc4dc';
-    /* full disk (stepped-corner round) */
-    rv(cx-4,cy-4,8,8,m);
-    rv(cx-5,cy-3,10,6,m);
-    rv(cx-3,cy-5,6,10,m);
-    /* carve a crescent by overdrawing a sky-coloured disk to the upper-right */
-    rv(cx-1,cy-5,7,9,cut);
-    rv(cx-2,cy-4,8,7,cut);
-    rv(cx,cy-6,5,11,cut);
-    /* a couple of craters on the lit crescent */
-    d(cx-4,cy-1,cr); d(cx-3,cy+2,cr); d(cx-3,cy-3,cr);
-    /* bright limb */
-    rv(cx-5,cy-2,1,4,'#f6f9ff');
+  /* ---------- 2. the Milky Way (clear, moonless nights) ---------- */
+  function drawMilkyWay(yOff){
+    if (!MW || PAL.mwVis < 0.01) return;
+    G.globalAlpha = PAL.mwVis;
+    if (yOff) G.drawImage(MW, 0, 0, W, 180, 0, 0, W, 180);
+    else G.drawImage(MW, 0, 180, W, YH - 12, 0, 0, W, YH - 12);
+    G.globalAlpha = 1;
   }
 
-  /* ---------- night stars (twinkling) ---------- */
+  /* ---------- 3. stars (twinkling; fade with twilight, cloud and fog) ---------- */
   function drawStar(s,y){
-    const a=s.b*(0.5+0.5*Math.sin(A.t*s.sp+s.ph));
+    const a=s.b*(0.5+0.5*Math.sin(A.t*s.sp+s.ph))*PAL.starVis;
     if(a<=0.02) return;
     d(s.x,y,`rgba(236,240,255,${a.toFixed(2)})`);
     if(s.big){
@@ -970,68 +1612,246 @@
   }
   /* main scene: stars whose world-y falls in the visible sky (0..just above hills) */
   function drawStars(){
+    if (PAL.starVis < 0.02) return;
     for(const s of stars){ if(s.wy<0 || s.wy>YH-12) continue; drawStar(s,s.wy); }
   }
   /* mobile #sceneTop: the sky band ABOVE the main scene (negative world-y) */
   function drawStarsTop(){
+    if (PAL.starVis < 0.02) return;
     for(const s of stars){ if(s.wy>=0) continue; drawStar(s,s.wy+180); }
   }
-
-  /* ---------- 3. drifting clouds ---------- */
-  function puff(cx,cy,s){
-    const w=TH.cloudW, sh=TH.cloudSh;
-    rv(cx-10*s,cy+1,20*s,2,sh);
-    rv(cx-11*s,cy-1,22*s,3,w);
-    rv(cx-7*s,cy-4,15*s,4,w);
-    rv(cx-1*s,cy-6,10*s,4,w);
-    rv(cx+5*s,cy-3,8*s,3,w);
-    rv(cx-13*s,cy-1,5*s,2,w);
-  }
-  function drawClouds(list){
-    list.forEach(c=>{ let x=(c.x+A.t*c.speed)%(W+70); if(x<0)x+=W+70; puff(x-35,c.y,c.s); });
+  function drawShootingStar(){
+    const s = A.shoot;
+    if (!s) return;
+    const a = Math.sin(Math.PI * s.t / 0.9) * PAL.starVis;
+    const hx = s.x + s.dx * s.t, hy = s.y + s.dy * s.t;
+    for (let i = 0; i < 10; i++) {
+      const y = hy - s.dy * 0.012 * i;
+      if (y > YH - 14) continue;
+      d(hx - s.dx * 0.012 * i, y, `rgba(240,244,255,${(a * (1 - i / 10)).toFixed(2)})`);
+    }
   }
 
-  /* ---------- 5. distant rolling hills on the horizon ---------- */
+  /* ---------- 4. the moon — real phase, real place in the sky ----------
+     Each row of the disk is split at the terminator; the lit side faces the
+     sun (right while waxing in the north, flipped south of the equator). By
+     day only the lit part shows, pale; by night the dark side keeps a faint
+     earthshine. */
+  const MOON_MARE = new Set(['-2,-2', '-1,-2', '-2,-1', '1,0', '2,0', '2,1', '-1,2', '0,2', '-3,1', '1,-3']);
+  function drawMoon(){
+    if (ENV.moonAlt < -3 || PAL.moonVis < 0.02) return;
+    const cx = Math.round(ENV.moonX), cy = Math.round(ENV.moonY), R = 6;
+    const night = PAL.nightF, vis = PAL.moonVis;
+    glowAt(cx, cy, 40, 1, [180, 198, 244], 0.1 * ENV.moonFrac * night * vis);
+    glowAt(cx, cy, 14, 1, [214, 226, 255], 0.22 * ENV.moonFrac * night * vis);
+    const k = Math.cos(2 * Math.PI * ENV.moonPhase), waxing = ENV.moonPhase < 0.5, flip = ENV.lat < 0;
+    const litA = vis * (1 - 0.45 * PAL.dayF), darkA = vis * night * 0.6;
+    const cLit = cssA([234, 238, 248], litA), cLimb = cssA([250, 252, 255], litA), cMare = cssA([196, 204, 224], litA);
+    const cTerm = cssA([150, 158, 186], litA * 0.85), cDark = cssA([34, 40, 72], darkA);
+    for (let dy = -R; dy <= R; dy++) {
+      const hw = Math.sqrt((R + 0.35) * (R + 0.35) - dy * dy);
+      for (let dx = -Math.floor(hw); dx <= Math.floor(hw); dx++) {
+        let nx = dx / hw;
+        if (flip) nx = -nx;
+        const edge = waxing ? nx - k : -k - nx;            // > 0 on the lit side
+        let c;
+        if (edge < -0.12) { if (darkA < 0.02) continue; c = cDark; }
+        else if (edge < 0.12) c = cTerm;
+        else c = MOON_MARE.has(dx + ',' + dy) ? cMare : (Math.abs(nx) > 0.82 ? cLimb : cLit);
+        d(cx + dx, cy + dy, c);
+      }
+    }
+  }
+
+  /* ---------- 5. the sun: big and warm as it nears the hills ---------- */
+  function drawSun(){
+    if (ENV.sunAlt < -2 || PAL.sunVis < 0.02) return;
+    const x = Math.round(ENV.sunX), y = Math.round(ENV.sunY), v = PAL.sunVis;
+    const low = 1 - smooth(2, 16, ENV.sunAlt);
+    const R = 4 + Math.round(low * 3);
+    glowAt(x, y, 34 + low * 18, 1, PAL.sunRGB, 0.32 * v);
+    glowAt(x, y, 13 + low * 6, 1, [255, 255, 250], 0.5 * v * (1 - low * 0.5));
+    G.globalAlpha = v;
+    for (let dy = -R; dy <= R; dy++) {
+      const hw = Math.round(Math.sqrt((R + 0.4) * (R + 0.4) - dy * dy));
+      rv(x - hw, y + dy, hw * 2 + 1, 1, dy > R * 0.3 ? PAL.sunEdge : PAL.sunCore);
+    }
+    G.globalAlpha = 1;
+  }
+
+  /* ---------- 6. crepuscular rays fanning from a low sun through broken cloud ---------- */
+  function drawRays(yOff){
+    const s = PAL.rays * PAL.sunVis;
+    if (s < 0.02) return;
+    const x = ENV.sunX, y = Math.min(ENV.sunY, YH) + yOff;
+    G.save();
+    G.beginPath(); G.rect(0, 0, W, Math.min(H, YH + yOff)); G.clip();
+    const g = G.createRadialGradient(x, y, 4, x, y, 260);
+    g.addColorStop(0, cssA(PAL.glow, 0.08 * s)); g.addColorStop(1, cssA(PAL.glow, 0));
+    G.fillStyle = g;
+    G.beginPath();
+    for (let i = 0; i < 11; i++) {
+      if (i % 4 === 2) continue;                       // gaps where cloud blocks the light
+      const a = Math.PI + (i + 0.5 + Math.sin(i * 7.1) * 0.3) * Math.PI / 11 + Math.sin(A.t * 0.05 + i * 1.7) * 0.04;
+      const w = 0.018 + 0.022 * (0.5 + 0.5 * Math.sin(i * 2.3 + A.t * 0.11));
+      G.moveTo(x, y);
+      G.lineTo(x + Math.cos(a - w) * 300, y + Math.sin(a - w) * 300);
+      G.lineTo(x + Math.cos(a + w) * 300, y + Math.sin(a + w) * 300);
+      G.closePath();
+    }
+    G.fill();
+    G.restore();
+  }
+
+  /* ---------- 7. drifting clouds (count follows the real cloud cover) ---------- */
+  function cloudX(c){
+    let x = (c.x + A.cloudT * c.speed) % (W + 110);
+    if (x < 0) x += W + 110;
+    return x - 55;
+  }
+  function drawClouds(yOff){
+    const fade = 1 - ENV.fog * 0.85;
+    for (const c of CLOUDS) {
+      const a = c.a * fade;
+      if (a < 0.01) continue;
+      const y = c.y + yOff - c.oy;
+      if (y > H || y + c.sprite.height < 0) continue;
+      G.globalAlpha = a;
+      G.drawImage(c.sprite, Math.round(cloudX(c) - c.ox), Math.round(y));
+    }
+    G.globalAlpha = 1;
+  }
+  /* sun-lit cloud shadows sliding across the field */
+  function drawCloudShadows(){
+    if (PAL.shadowA < 0.01) return;
+    for (const c of CLOUDS) {
+      if (c.y < 0) continue;
+      const a = c.a * PAL.shadowA;
+      if (a < 0.01) continue;
+      const cx = cloudX(c) + c.sprite.width / 2 - c.ox, cy = YH + 10 + c.y * 1.25;
+      const rw = c.sprite.width * 0.55, rh = 3 + c.sprite.width * 0.06;
+      for (const [k, al] of [[1, a * 0.5], [0.7, a * 0.5]]) {
+        G.fillStyle = `rgba(14,24,36,${al.toFixed(3)})`;
+        for (let dy = -rh * k; dy <= rh * k; dy++) {
+          const hw = rw * k * Math.sqrt(Math.max(0, 1 - (dy / (rh * k)) ** 2));
+          G.fillRect(Math.round(cx - hw), Math.round(cy + dy), Math.round(hw * 2), 1);
+        }
+      }
+    }
+  }
+
+  /* ---------- 8. a rainbow, arcing away from the sun, when it shines through rain ---------- */
+  let RB = null, RBkey = '';
+  const RB_COLS = [[255, 84, 84], [255, 164, 64], [255, 238, 112], [112, 214, 112], [100, 170, 255], [112, 112, 232], [170, 104, 222]];
+  function drawRainbow(){
+    if (PAL.rainbow < 0.02) return;
+    const mid = (ENV.visL + ENV.visR) / 2, mob = MQ.matches;
+    const R = mob ? Math.round((ENV.visR - ENV.visL) * 0.7) : 88, cy = Math.round(YH + 6 + ENV.sunAlt * 1.4);
+    const cx = Math.round(mob ? (ENV.sunX < mid ? ENV.visR : ENV.visL) : ENV.sunX + (ENV.sunX < mid ? 130 : -130));
+    const key = cx + ',' + cy;
+    if (key !== RBkey) {
+      RBkey = key;
+      RB = RB || document.createElement('canvas');
+      RB.width = W; RB.height = YH;
+      const g = RB.getContext('2d'), img = g.createImageData(W, YH);
+      for (let y = 0; y < YH; y++) for (let x = Math.max(0, cx - R - 18); x < Math.min(W, cx + R + 18); x++) {
+        const dist = Math.hypot(x - cx, y - cy), fade = smooth(0, 30, YH - 4 - y);
+        let col = null, a = 0;
+        const b1 = R - dist, b2 = dist - (R + 9);
+        if (b1 >= 0 && b1 < 7) { col = RB_COLS[b1 | 0]; a = 0.34; }
+        else if (b2 >= 0 && b2 < 7) { col = RB_COLS[6 - (b2 | 0)]; a = 0.11; }      // faint secondary bow, colours reversed
+        if (!col) continue;
+        const i = (y * W + x) * 4;
+        img.data[i] = col[0]; img.data[i + 1] = col[1]; img.data[i + 2] = col[2]; img.data[i + 3] = a * fade * 255;
+      }
+      g.putImageData(img, 0, 0);
+    }
+    G.globalAlpha = PAL.rainbow;
+    G.drawImage(RB, 0, 0);
+    G.globalAlpha = 1;
+  }
+
+  /* ---------- 9. lightning bolt (the flash itself is in drawAmbient) ---------- */
+  function drawBolt(){
+    if (A.boltT <= 0 || !A.bolt) return;
+    const line = (pts, c, ox) => { for (let i = 1; i < pts.length; i++) pxLine(pts[i - 1][0] + ox, pts[i - 1][1], pts[i][0] + ox, pts[i][1], c, 0, YH); };
+    line(A.bolt.pts, 'rgba(180,196,255,0.35)', -1); line(A.bolt.pts, 'rgba(180,196,255,0.35)', 1);
+    line(A.bolt.pts, '#f6f8ff', 0);
+    line(A.bolt.branch, 'rgba(236,240,255,0.8)', 0);
+  }
+
+  /* ---------- 10. birds crossing a fair sky ---------- */
+  function drawBirds(){
+    const b = A.birds;
+    if (!b) return;
+    const c = PAL.bird;
+    for (let i = 0; i < b.n; i++) {
+      const row = (i + 1) >> 1, side = i % 2 ? -1 : 1;
+      const x = Math.round(b.x - b.dir * row * 7), y = Math.round(b.y + side * row * 3 + Math.sin(A.t * 1.3 + i) * 1.2);
+      if (((A.t * 6 + i * 0.37) | 0) % 3 === 0) { d(x - 2, y + 1, c); d(x - 1, y, c); d(x, y, c); d(x + 1, y, c); d(x + 2, y + 1, c); }
+      else { d(x - 2, y - 2, c); d(x - 1, y - 1, c); d(x, y, c); d(x + 1, y - 1, c); d(x + 2, y - 2, c); }
+    }
+  }
+
+  /* ---------- 11. distant rolling hills on the horizon ---------- */
+  const HILL_F = [], HILL_N = [];
+  for (let x = 0; x < W; x++) {
+    HILL_F.push((YH - (5 + Math.sin(x * 0.045) * 3.5 + Math.sin(x * 0.11 + 1.3) * 2.2)) | 0);
+    HILL_N.push((YH - (3 + Math.sin(x * 0.07 + 2.5) * 2.4 + Math.sin(x * 0.19) * 1.5)) | 0);
+  }
   function drawHills(){
-    for(let x=0;x<W;x++){ const top=(YH-(5+Math.sin(x*0.045)*3.5+Math.sin(x*0.11+1.3)*2.2))|0; rv(x,top,1,YH-top,P.hillFar); }
-    for(let x=0;x<W;x++){ const top=(YH-(3+Math.sin(x*0.07+2.5)*2.4+Math.sin(x*0.19)*1.5))|0; rv(x,top,1,YH-top,P.hillNear); }
+    for (let x = 0; x < W; x++) rv(x, HILL_F[x], 1, YH - HILL_F[x], P.hillFar);
+    G.fillStyle = P.hillRim;                     // low sun catching the far ridgeline
+    for (let x = 0; x < W; x++) G.fillRect(x, HILL_F[x], 1, 1);
+    for (let x = 0; x < W; x++) rv(x, HILL_N[x], 1, YH - HILL_N[x], P.hillNear);
   }
 
-  /* --- distant tree silhouettes along the horizon --- */
+  /* --- distant poplars along the horizon (lit on the side facing the sun/moon) --- */
   function drawTrees(){
+    const snowy = ENV.snowCover > 0.3;
     trees.forEach(t=>{
-      rv(t.x-1,t.y,t.w,t.h,TH.treeA);
-      rv(t.x,t.y-2,1,2,TH.treeB);
-      rv(t.x-2,t.y+t.h-2,t.w+4,4,TH.treeC);
+      const x=t.x-1, w=t.w, lit=PAL.washX<t.x ? x : x+w-1;
+      rv(x,t.y+1,w,t.h-1,TH.treeA);
+      rv(x+(w>2?1:0),t.y,w>2?w-2:w,1,TH.treeA);              // rounded crown
+      rv(t.x,t.y-2,1,2,TH.treeA);                              // spire
+      rv(lit,t.y+1,1,t.h-4,TH.treeB);                          // lit flank
+      rv(t.x-2,t.y+t.h-2,t.w+4,4,TH.treeC);                    // shrubby base
+      rv(t.x-1,t.y+t.h-3,t.w+2,1,TH.treeC);
+      if (snowy) { rv(x,t.y,w,1,PAL.snowFar); d(t.x,t.y-2,PAL.snowFar); }
     });
   }
 
   /* --- wooden fence posts along the horizon --- */
   function drawFence(){
+    const snowy = ENV.snowCover > 0.3;
     fence.forEach(f=>{
       const x=f.x|0, by=(YH-8-f.offset)|0;
       rv(x,by,1,8,TH.fencePost); rv(x-2,by+3,5,1,TH.fenceRail); d(x-1,by,TH.fenceDark);
-      if(f.piece<1){ rv(x,by,13,1,TH.fencePost); rv(x,by+3,13,1,TH.fenceRail); }
+      if(f.piece<1){ rv(x,by,13,1,snowy ? PAL.snowFar : TH.fencePost); rv(x,by+3,13,1,TH.fenceRail); }
+      if (snowy) d(x,by,PAL.snowFar);
     });
   }
 
-  /* ---------- 6. the green field ground ---------- */
+  /* ---------- 12. the field ground (green, golden, moonlit or under snow) ---------- */
   function drawField(){
-    for(let y=YH;y<H;y++) rv(0,y,W,1,lerpC(GR_FAR,GR_NEAR,(y-YH)/(H-YH)));
+    for(let y=YH;y<H;y++) rv(0,y,W,1,PAL.field[y-YH]);
     rv(0,YH,W,1,TH.horizonGlow);                           // hazy horizon glow
     rv(34,YH+16,64,7,TH.fieldPatch);                       // soft lit patches
     rv(150,YH+30,84,9,TH.fieldPatch);
     rv(18,YH+54,96,12,TH.fieldPatch);
+    if (ENV.snowCover > 0.3) [[20,110,70],[150,117,96],[60,131,110],[206,139,84],[8,152,124],[168,160,130]]
+      .forEach(([x,y,w]) => { rv(x,y,w,1,PAL.drift); rv(x+6,y+1,w-12,1,PAL.drift); });   // soft drift shadows
   }
 
-  /* ---------- 7. grass tufts (each blade sways in the breeze) ---------- */
+  /* ---------- 13. grass tufts (each blade sways in the breeze; wind bends them harder) ---------- */
   function tuft(t){
-    const col=GCOLS[t.ci];
+    const col=GCOLS[t.ci], sc=ENV.snowCover, gust=0.22*(1+ENV.wind*0.9);
     for(let b=0;b<t.n;b++){
       const off=b-(t.n-1)/2;
       const bx=t.x+off*2;
-      const bh=Math.max(2,(t.h-Math.abs(off)*1.4))|0;
-      const ph=t.phase+b*0.6, amp=bh*0.22;
+      let bh=Math.max(2,(t.h-Math.abs(off)*1.4))|0;
+      if(sc>0.05){ bh=Math.round(bh-sc*6); if(bh<1) continue; }   // buried in snow
+      const ph=t.phase+b*0.6, amp=bh*gust;
       let lx=bx,ly=t.y;
       for(let i=0;i<=bh;i++){
         const tt=i/bh;
@@ -1039,20 +1859,116 @@
         d(lx,ly,col);
       }
       d(lx,ly,TH.grassTip);                                // sun-/moon-lit tip
+      /* morning dew glinting on the tips */
+      if(PAL.dew>0.05 && Math.sin(A.t*1.3+t.phase*7+b*2.1)>0.985) d(lx,ly,`rgba(255,255,255,${(0.95*PAL.dew).toFixed(2)})`);
     }
   }
   function drawGrass(list){ list.forEach(tuft); }
 
-  /* ---------- 8. wildflowers (bobbing on their stems) ---------- */
+  /* ---------- 14. wildflowers (bobbing on their stems; tucked under snow) ---------- */
   function drawFlowers(){
+    const hide=ENV.snowCover*1.6, gust=1.3*(1+ENV.wind*0.9);
     flowers.forEach(f=>{
+      if(hide>f.phase/6.28) return;
       const pair=FCOLS[f.fi], col=pair[0], cen=pair[1];
       rv(f.x,f.y-f.stem,1,f.stem,TH.stem);                 // stem
-      const fx=Math.round(f.x+Math.sin(A.sway*0.9+f.phase)*1.3), fy=f.y-f.stem;
+      const fx=Math.round(f.x+Math.sin(A.sway*0.9+f.phase)*gust), fy=f.y-f.stem;
       d(fx,fy-1,col);d(fx-1,fy,col);d(fx+1,fy,col);d(fx,fy+1,col);
       if(f.size>1){ d(fx-1,fy-1,col);d(fx+1,fy-1,col);d(fx-1,fy+1,col);d(fx+1,fy+1,col); }
       d(fx,fy,cen);
     });
+  }
+
+  /* ---------- butterflies on warm, calm, dry days ---------- */
+  function drawButterflies(){
+    if (PAL.bfly < 0.5) return;
+    BFLY.forEach((b, i) => {
+      const t = A.t;
+      const x = Math.round(b.x + Math.sin(t * 0.23 + b.ph) * 38 + Math.sin(t * 1.1 + b.ph * 2) * 6);
+      const y = Math.round(128 + Math.sin(t * 0.37 + b.ph) * 16 + Math.sin(t * 3.1 + b.ph) * 2);
+      const c = css(mixC(b.c, [40, 40, 40], 0.08));
+      if (((t * 9 + i * 0.7) | 0) % 2 === 0) { d(x - 1, y - 1, c); d(x + 1, y - 1, c); d(x - 1, y, c); d(x + 1, y, c); }
+      else { d(x, y - 1, c); d(x, y - 2, c); }
+      d(x, y, '#3a2a1a');
+    });
+  }
+
+  /* ---------- rain & snow (world coordinates, so they fall through both mobile canvases) ---------- */
+  /* Only ~10 rows of the mobile #sceneTop band are on screen, so particles
+     start just above it (world -20) rather than at its far top. */
+  function drawPrecip(yOff){
+    if (ENV.rain < 0.01 && ENV.snow < 0.01) return;
+    const l = ENV.visL, span = ENV.visR - ENV.visL, top = -20;
+    const areaK = span / W;
+    if (ENV.rain >= 0.01) drawRain(yOff, top, l, span, areaK, YH + 3, H, 0);
+    if (ENV.snow >= 0.01) drawSnow(yOff, top, l, span, areaK, YH + 2, H);
+  }
+  /* mobile: a sprinkle of near rain/snow falling IN FRONT of the big toad (its own canvas) */
+  function drawPrecipStage(){
+    if (ENV.rain >= 0.01) drawRain(0, -10, 0, TM.width, 0.3, 128, TM.height, 2);
+    if (ENV.snow >= 0.01) drawSnow(0, -10, 0, TM.width, 0.3, 120, TM.height);
+  }
+  function drawRain(yOff, top, l, span, areaK, land0, land1, firstLayer){
+    const R = ENV.rain, dz = ENV.drizzle > 0.5;
+    const n = Math.min(DROPS.length, Math.round(DROPS.length * Math.min(1, R * 1.15) * areaK));
+    const slant = ENV.wind * 0.55 + 0.04;
+    for (let b = firstLayer; b < 3; b++) {                 // three depth layers: far, mid, near
+      G.fillStyle = PAL.drops[b];
+      for (let i = b; i < n; i += 3) {
+        const p = DROPS[i], depth = (b + p.land) / 3;
+        const land = land0 + depth * (land1 - land0);
+        const speed = (dz ? 70 : 150) + depth * (dz ? 50 : 110) + p.sp * 30;
+        const len = Math.round((dz ? 1.5 : 3) + depth * (dz ? 1.5 : 4 + R * 3));
+        const life = land - top, cyc = life + 10;
+        const ph = (p.y * cyc + A.precipT * speed) % cyc;
+        let x = l + p.x * span + ph * slant;
+        x = l + ((x - l) % span + span) % span;
+        if (ph < life) {
+          const y = top + ph + yOff;
+          for (let j = 0; j < len; j += 2) {
+            const yy = y - len + j;
+            if (yy < 0 || yy >= H) continue;
+            G.fillRect((x - (len - j) * slant) | 0, yy | 0, 1, Math.min(2, len - j));
+          }
+        } else if (!dz || depth > 0.5) {                   // splash where it lands
+          const s = ph - life, yy = (land + yOff) | 0, xx = x | 0;
+          if (yy < 0 || yy >= H) continue;
+          if (s < 3.3) G.fillRect(xx, yy - 1, 1, 1);
+          else if (s < 6.6) { G.fillRect(xx - 1, yy - 1, 1, 1); G.fillRect(xx + 1, yy - 1, 1, 1); }
+          else { G.fillRect(xx - 2, yy, 1, 1); G.fillRect(xx + 2, yy, 1, 1); }
+        }
+      }
+    }
+  }
+  function drawSnow(yOff, top, l, span, areaK, land0, land1){
+    const n = Math.min(FLAKES.length, Math.round(FLAKES.length * Math.min(1, ENV.snow * 1.2) * areaK));
+    for (let i = 0; i < n; i++) {
+      const p = FLAKES[i], depth = p.land;
+      const land = land0 + depth * (land1 - land0), life = land - top;
+      const y = top + (p.y * life + A.precipT * (9 + depth * 14 + p.sp * 6)) % life + yOff;
+      if (y < 0 || y >= H) continue;
+      let x = l + p.x * span + Math.sin(A.t * (0.5 + p.amp) + p.ph) * (1.5 + p.amp * 3) + A.windX * (8 + depth * 18);
+      x = l + ((x - l) % span + span) % span;
+      const big = depth > 0.72;
+      rv(x, y, big ? 2 : 1, big ? 2 : 1, depth > 0.4 ? PAL.flake : PAL.flakeFar);
+    }
+  }
+
+  /* ---------- fog banks (real fog, or dawn mist lying on the field) ---------- */
+  function drawFog(front){
+    const f = front ? ENV.fog : Math.max(ENV.fog, PAL.mist);
+    if (f < 0.02) return;
+    const col = PAL.fogRGB;
+    if (!front) {                                          // a veil thickest at the horizon
+      const g = G.createLinearGradient(0, YH - 28, 0, H);
+      g.addColorStop(0, cssA(col, 0)); g.addColorStop(0.3, cssA(col, f * 0.5)); g.addColorStop(1, cssA(col, f * 0.18));
+      G.fillStyle = g; G.fillRect(0, YH - 28, W, H - YH + 28);
+    }
+    for (const b of (front ? FOG_FRONT : FOG_BACK)) {
+      let x = (b.x + A.cloudT * b.sp * 3) % (W + b.w);
+      if (x < 0) x += W + b.w;
+      glowAt(x - b.w / 2, b.y, b.h * 2, b.w / (b.h * 4), col, f * (front ? 0.42 : 0.42));
+    }
   }
 
   /* ---------- 15. TOAD (the star of the show) ---------- */
@@ -1224,16 +2140,43 @@
       }
     }
 
-    /* ambient highlight */
-    rv(tx+22,ty+1,26,2,'rgba(80,120,200,0.18)');
-    rv(tx+13,ty+4,8,2,'rgba(80,120,200,0.10)');
-    rv(tx+49,ty+4,8,2,'rgba(80,120,200,0.10)');
-    rv(tx+13,ty+15,17,8,'rgba(30,100,220,0.06)');
+    /* snow settles on the crown, eye bumps, shoulders and knees */
+    if (ENV.snowCover > 0.25) {
+      const sn = PAL.snow, sh = PAL.snowSh;
+      rv(tx+25,ty+3,20,1,sn); rv(tx+23,ty+4,24,1,sh);
+      rv(tx+14,ty-1,9,1,sn); rv(tx+13,ty,11,1,sh);
+      rv(tx+49,ty-1,9,1,sn); rv(tx+48,ty,11,1,sh);
+      rv(tx+7,ty+37+bo,9,1,sn); rv(tx+55,ty+37+bo,9,1,sn);
+      rv(tx+10,ty+75,12,1,sn); rv(tx+48,ty+75,12,1,sn);
+    }
 
-    /* ground shadow (ground stays locked to field y) */
-    const groundTy = S.toad.y;
-    rv(tx-3,groundTy+88,76,3, hoverY ? 'rgba(0,0,0,0.18)' : 'rgba(0,0,0,0.30)');
-    rv(tx+4,groundTy+90,62,2, hoverY ? 'rgba(0,0,0,0.08)' : 'rgba(0,0,0,0.15)');
+    /* ambient highlight — the key light (sun, sunset or moon) on the crown */
+    rv(tx+22,ty+1,26,2,PAL.rim[0]);
+    rv(tx+13,ty+4,8,2,PAL.rim[1]);
+    rv(tx+49,ty+4,8,2,PAL.rim[1]);
+    rv(tx+13,ty+15,17,8,PAL.rim[2]);
+
+    /* rim light on the flank facing a low sun (or the moon) */
+    if (PAL.sideRimA > 0.02) {
+      const c = PAL.sideRim, L = PAL.washX < toadCX();
+      const e = L ? [[10,1,10],[11,14,14],[1,41+bo,10],[-1,49+bo,10],[-3,59,15],[1,80,6]]
+                  : [[59,1,10],[58,14,14],[68,41+bo,10],[70,49+bo,10],[72,59,15],[68,80,6]];
+      e.forEach(([ex,ey,eh]) => rv(tx+ex,ty+ey,1,eh,c));
+    }
+
+    /* raindrops beading on the skin (toads love the rain) */
+    if (ENV.rain > 0.08) {
+      const drops = [[19,4],[50,4],[31,11],[42,17],[58,43],[11,45],[36,41],[22,58],[50,63]];
+      drops.forEach(([px,py],i) => {
+        if (Math.sin(A.t*2.3+i*1.7) > 0.55 - ENV.rain*0.4) d(tx+px, ty+py+(py>35?bo:0), 'rgba(226,236,255,0.75)');
+      });
+    }
+
+    /* ground shadow (ground stays locked to field y); stretches away from a low sun */
+    const groundTy = S.toad.y, sx = PAL.shadowDX;
+    rv(tx-3,groundTy+88,76,3, PAL.toadSh[hoverY ? 2 : 0]);
+    rv(tx+4,groundTy+90,62,2, PAL.toadSh[hoverY ? 3 : 1]);
+    if (sx) rv(sx > 0 ? tx+73 : tx-3+sx, groundTy+88, Math.abs(sx), 3, PAL.toadSh[3]);
   }
 
   /* ---------- 15b. TOAD THOUGHT ANIMATION (deep cosmic contemplation) ---------- */
@@ -1587,27 +2530,40 @@
     }
   }
 
-  /* ---------- 16. ambient / post-processing (cool, moonlit, peaceful) ---------- */
-  function drawAmbient(){
-    /* Top-edge effects (cool moon wash + top vignette) only on desktop: on
-       mobile the main scene's top edge is the *seam* with #sceneTop (mid-screen,
-       not a real edge), so tinting it there would make a visible line. */
-    if(!MQ.matches){
-      rv(0,0,W,46,'rgba(120,140,210,0.05)');   // cool moonlight wash from the moon
-      rv(0,0,90,30,'rgba(150,170,235,0.05)');
-      rv(0,0,W,3,'rgba(6,8,24,0.22)');         // top vignette
+  /* ---------- 16. ambient / post-processing (the light of the moment) ---------- */
+  /* the key light's wash (sun or moon) — drawn on both mobile canvases so it has no seam */
+  function drawLightWash(yOff){
+    glowAt(PAL.washX, PAL.washY + yOff, 170, 1, PAL.washC, PAL.washA);
+    if (PAL.goldA > 0.004) {                                   // golden hour: warm light leaking in from the sun's side
+      const g = G.createLinearGradient(ENV.sunX, 0, ENV.sunX < W / 2 ? W : 0, 0);
+      g.addColorStop(0, cssA(PAL.glow, PAL.goldA)); g.addColorStop(1, cssA(PAL.glow, 0));
+      G.fillStyle = g; G.fillRect(0, 0, W, H);
     }
+  }
+  function drawAmbient(){
+    drawLightWash(0);
+    /* Top-edge vignette only on desktop: on mobile the main scene's top edge
+       is the *seam* with #sceneTop (mid-screen, not a real edge). */
+    if(!MQ.matches) rv(0,0,W,3,PAL.vig[1]);
     /* gentle side/bottom vignette (real screen edges) */
-    rv(0,H-4,W,4,'rgba(4,6,20,0.32)');
-    rv(0,0,5,H,'rgba(6,8,24,0.22)');
-    rv(W-5,0,5,H,'rgba(6,8,24,0.22)');
-    /* blinking fireflies drifting over the field */
-    motes.forEach(m=>{
+    rv(0,H-4,W,4,PAL.vig[0]);
+    rv(0,0,5,H,PAL.vig[1]);
+    rv(W-5,0,5,H,PAL.vig[1]);
+    /* fireflies blinking over the field on warm, dry nights; by day the same
+       motes become golden pollen drifting in low sunlight */
+    const ff = PAL.firefly, gm = PAL.motes;
+    if (ff > 0.02 || gm > 0.02) motes.forEach(m=>{
       const x=(m.x+Math.sin(A.t*m.sp+m.phase)*m.drift)|0;
       let y=m.y-(A.t*3*m.sp); y=((y-YH)%(H-YH)+(H-YH))%(H-YH)+YH;
-      const a=0.12+0.6*Math.max(0,Math.sin(A.t*2.2+m.phase));
-      if(a>0.05) d(x,y|0,`rgba(196,238,150,${a.toFixed(2)})`);
+      if (ff > 0.02) {
+        const a=(0.12+0.6*Math.max(0,Math.sin(A.t*2.2+m.phase)))*ff;
+        if(a>0.05) d(x,y|0,`rgba(196,238,150,${a.toFixed(2)})`);
+      } else {
+        const a=(0.1+0.4*Math.max(0,Math.sin(A.t*1.1+m.phase)))*gm;
+        if(a>0.05) d(x,(y-14)|0,`rgba(255,228,160,${a.toFixed(2)})`);
+      }
     });
+    if (A.flash > 0.01) rv(0,0,W,H,flashCol());               // lightning lights the whole meadow
   }
 
   /* =================================================================
@@ -1615,7 +2571,8 @@
      ================================================================= */
   function update(dt){
     A.t+=dt;
-    A.sway+=dt*1.1;       // wind for the grass / flowers
+    updateEnv(dt);        // the living sky: weather easing, sun/moon, sky events
+    A.sway+=dt*(1.1+ENV.wind*1.6);   // wind for the grass / flowers (real wind speed)
     A.breath+=dt*1.4;     // toad breathing
 
     if (A.thinking) {
@@ -2128,22 +3085,34 @@
      ================================================================= */
   function render(){
     G.clearRect(0,0,W,H);
-    drawSky();                       // sky gradient (deep navy → hazy horizon)
+    drawSky();                       // sky gradient + the glow around the sun
+    drawMilkyWay(0);                 // clear, moonless nights
     drawStars();                     // twinkling stars
-    drawMoon(52,26);                 // crescent moon with a cool glow
-    drawClouds(cloudsA);
+    drawShootingStar();
+    drawMoon();                      // real phase, real position
+    drawSun();
+    drawRays(0);                     // crepuscular rays from a low sun
+    drawClouds(0);
+    drawRainbow();
+    drawBolt();
+    drawBirds();
     drawHills();                     // rolling hills on the horizon
     drawTrees();                     // distant tree silhouettes
     drawFence();                     // wooden fence along the horizon
-    drawField();                     // green field ground
+    drawField();                     // the field ground
+    drawFog(false);                  // fog / dawn mist lying on the far field
     drawGrass(grassB);               // background grass (behind the toad)
     drawFlowers();
+    drawButterflies();
+    drawCloudShadows();
     if (!MQ.matches) {
       drawToad();                    // toad on field
       drawThought();                 // thought animation above toad
     }
     drawGrass(grassF);               // foreground grass swaying in front of the toad
-    drawAmbient();                   // cool moonlight wash + fireflies
+    drawPrecip(0);                   // rain / snow
+    drawFog(true);                   // low fog drifting in front
+    drawAmbient();                   // light wash, vignette, fireflies, lightning flash
     if (MQ.matches) {
       /* Mobile chat is pure DOM (#mobile-chat). The canvas bubble system
          (history + input frame + swipe-up sent bubble + toad reply bubble/tail)
@@ -2195,6 +3164,7 @@
   window.addEventListener('resize',resize);
   resize();
 
+  initSky();                         // the visitor's real sun, moon and weather
   requestAnimationFrame(loop);
 
   function escapeHTML(str) {

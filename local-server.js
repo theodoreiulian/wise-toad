@@ -28,8 +28,19 @@ if (!process.env.GEMINI_API_KEY) {
   }
 }
 
-/* Reuse the serverless proxy as a plain Node module */
+/* Reuse the serverless functions as plain Node modules */
 const chatHandler = require('./api/chat.js');
+const weatherHandler = require('./api/weather.js');
+
+/* Express-like helpers so the api/*.js handlers work in vanilla Node */
+function withHelpers(res) {
+  res.status = (code) => { res.statusCode = code; return res; };
+  res.json = (obj) => {
+    res.setHeader('Content-Type', 'application/json');
+    res.end(JSON.stringify(obj));
+  };
+  return res;
+}
 
 const server = http.createServer((req, res) => {
   /* Let any device on your network talk to this server */
@@ -49,19 +60,20 @@ const server = http.createServer((req, res) => {
     req.on('data', chunk => { body += chunk; });
     req.on('end', () => {
       try { req.body = JSON.parse(body); } catch { req.body = {}; }
-      // Add Express-like helpers so api/chat.js works in vanilla Node
-      res.status = (code) => { res.statusCode = code; return res; };
-      res.json = (obj) => {
-        res.setHeader('Content-Type', 'application/json');
-        res.end(JSON.stringify(obj));
-      };
-      chatHandler(req, res);
+      chatHandler(req, withHelpers(res));
     });
     return;
   }
 
-  /* ---- Static file server ---- */
-  const filePath = req.url === '/' ? './index.html' : '.' + req.url;
+  /* ---- Local sky (location + current weather) for the living scene ---- */
+  const urlPath = req.url.split('?')[0];
+  if (urlPath === '/api/weather' && req.method === 'GET') {
+    weatherHandler(req, withHelpers(res));
+    return;
+  }
+
+  /* ---- Static file server (query strings like ?time=19:30 are ignored) ---- */
+  const filePath = urlPath === '/' ? './index.html' : '.' + urlPath;
   fs.readFile(filePath, (err, data) => {
     if (err) {
       res.writeHead(404);
