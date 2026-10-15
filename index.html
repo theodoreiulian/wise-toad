@@ -1329,21 +1329,27 @@
      has a coverage threshold: as cloud cover rises, more of them fade in
      (c.a eases 0↔1 in updateEnv, so no cloud lingers half-transparent). */
   const rng2 = mulberry(4242);
+  /* lobes are slightly flattened ovals (ry < r) with low towers, so clouds read as
+     soft drifting cumulus rather than round cotton puffs */
   function cloudShape(s){
-    const w = Math.round((26 + rng2() * 26) * s), lobes = [];
-    const add = (u, r, lift) => lobes.push({ x: Math.round(u * w), y: -Math.round(r * lift), r: Math.max(2, Math.round(r)) });
+    const w = Math.round((28 + rng2() * 27) * s), lobes = [];
+    const add = (u, r, lift, squash) => {
+      const R = Math.max(2, Math.round(r)), ry = Math.max(1, Math.round(r * squash));
+      lobes.push({ x: Math.round(u * w), y: -Math.round(ry * lift), r: R, ry });
+    };
     const nb = Math.max(3, Math.round(w / 8));
-    for (let i = 0; i < nb; i++) add((i + 0.5) / nb, 2.5 + rng2() * 2.5 * s, 0.5);               // flat base
-    add(0.08 + rng2() * 0.16, (3.5 + rng2() * 2.5) * s, 0.75);                                    // shoulders
-    add(0.76 + rng2() * 0.16, (3.5 + rng2() * 2.5) * s, 0.75);
+    for (let i = 0; i < nb; i++) add((i + 0.5) / nb, 3 + rng2() * 2.5 * s, 0.45, 0.68);           // long flat base
+    add(0.08 + rng2() * 0.16, (3.5 + rng2() * 2.5) * s, 0.65, 0.74);                              // shoulders
+    add(0.76 + rng2() * 0.16, (3.5 + rng2() * 2.5) * s, 0.65, 0.74);
     const nt = 1 + (rng2() < 0.65 ? 1 : 0) + (w > 48 && rng2() < 0.5 ? 1 : 0);
-    for (let i = 0; i < nt; i++) {                                                                 // towers + cauliflower bumps
-      const u = 0.28 + (nt > 1 ? i / (nt - 1) : 0.5) * 0.44 + (rng2() - 0.5) * 0.1, r = (5.5 + rng2() * 4.5) * s;
-      add(u, r, 0.95);
-      add(u + (rng2() - 0.5) * 0.18, r * 0.45, 3.4);                                              // bump poking over the tower top
+    for (let i = 0; i < nt; i++) {                                                                 // low towers, an occasional bump
+      const u = 0.28 + (nt > 1 ? i / (nt - 1) : 0.5) * 0.44 + (rng2() - 0.5) * 0.1, r = (5.5 + rng2() * 4) * s;
+      add(u, r, 0.82, 0.76);
+      const bu = u + (rng2() - 0.5) * 0.2;
+      if (rng2() < 0.5) add(bu, r * 0.42, 2.8, 0.8);
     }
     let x0 = 1e9, x1 = -1e9, y0 = 1e9;
-    for (const L of lobes) { x0 = Math.min(x0, L.x - L.r); x1 = Math.max(x1, L.x + L.r); y0 = Math.min(y0, L.y - L.r); }
+    for (const L of lobes) { x0 = Math.min(x0, L.x - L.r); x1 = Math.max(x1, L.x + L.r); y0 = Math.min(y0, L.y - L.ry); }
     const sprite = document.createElement('canvas');
     const ox = 2 - x0, oy = 2 - y0;                 // local (0,0) = left end of the flat base
     sprite.width = x1 + ox + 2; sprite.height = oy + 3;
@@ -1355,12 +1361,12 @@
     const passAt = (shrink, dx, dy, fill, maxY) => {
       g.fillStyle = fill;
       for (const L of c.lobes) {
-        const r = L.r - shrink;
-        if (r < 1) continue;
-        for (let yy = -r; yy <= r; yy++) {
+        const r = L.r - shrink, ry = L.ry - shrink;
+        if (r < 1 || ry < 1) continue;
+        for (let yy = -ry; yy <= ry; yy++) {
           const y = L.y + yy + dy;
           if (y > maxY) continue;
-          const hw = Math.round(Math.sqrt(r * r - yy * yy));
+          const hw = Math.round(r * Math.sqrt(1 - (yy / ry) * (yy / ry)));
           g.fillRect(L.x + dx - hw + c.ox, y + c.oy, hw * 2 + 1, 1);
         }
       }
