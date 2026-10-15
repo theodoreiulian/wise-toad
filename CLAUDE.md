@@ -81,11 +81,13 @@ right canvas pixels at any scale. Font sizes are scaled by `wrapperH / H` for th
 
 Everything lives in the **LIVING SKY** section of `index.html` (after the field layout).
 
-- **Where** (`initSky` / `refreshSky` / `fetchSky`): first frame uses the `localStorage` cache
-  (`wiseToad.sky`) or `guessLocation()` (timezone's standard offset → longitude, tz region → rough
-  latitude). Then `fetchSky()` asks `/api/weather` (host IP-geo + Open-Meteo); if that's missing it
-  calls geojs.io + Open-Meteo straight from the browser. Precise browser geolocation is used **only
-  if already granted** — the page never prompts. Weather refreshes every 15 min and on tab return
+- **Where** (`initSky` / `refreshSky` / `fetchSky`): a brief loading screen hides the scene while
+  `fetchSky()` asks `/api/weather` (host IP-geo + Open-Meteo); if that's missing it calls geojs.io +
+  Open-Meteo straight from the browser. The first lookup has a shared 4.5-second deadline; on failure
+  it uses the `localStorage` cache (`wiseToad.sky`) or `guessLocation()` (timezone's standard offset →
+  longitude, tz region → rough latitude). Initial location, weather, cloud opacity and palette are
+  applied together before the first visible frame; timed-out lookups cannot apply late corrections.
+  Precise browser geolocation is used **only if already granted** — the page never prompts. Weather refreshes every 15 min and on tab return
   (>10 min stale). Location changes ease (`ENV.latT/lonT`), so the sky never jumps.
 - **When** (`updateSkyBodies`, every 0.25 s): `skyNow()` (real clock, or the `?time`/`?date`/
   `?timelapse` sim clock) → a compact **SunCalc** port gives real sun + moon altitude/azimuth and the
@@ -127,8 +129,11 @@ Everything lives in the **LIVING SKY** section of `index.html` (after the field 
 - **Mobile**: `drawSceneTop()` repeats sky glow, Milky Way, stars, rays, clouds, rain/snow, light wash
   and flash in the same world coordinates (+180). `drawPrecipStage()` adds near rain/snow in front of
   the big `#toadMobile` toad, and lightning lights his pixels via `'source-atop'`.
-- **Chat UI colours are deliberately constant** (`TH.tbFill/tbBorder/ubFill/ubBorder`, the DOM text
-  colours and the cosmic thought cloud stay midnight blue) so text reads the same over noon or storm.
+- **Chat UI colours follow the sky**: `buildChatTheme()` derives `TH.tbFill/tbBorder/ubFill/ubBorder`
+  and highlights from the same time/weather palette: warm parchment by day, muted slate in wet weather,
+  ink at night. Shared CSS variables style text, placeholders, links, bold and send controls with a
+  4.5:1 contrast floor against both bubble fills. Desktop live/history/swipe bubbles and thought clouds
+  share the theme; mobile input and visible dialogue canvases repaint on each palette tick.
 
 ## Chat system (the subtle part)
 
@@ -151,8 +156,8 @@ and the scene executes a **frame-driven synchronized dual-scroll animation** (`A
    sky, and dissolves into starlight.
 2. **New Message Gliding Entrance**: The new user message (`#sentMessage`) detaches from the input dock
    (`y = 168 - th`) and glides upward across the meadow into `y = 15` following a balanced cubic ease-in-out
-   curve with a gentle tactile cushion. Its border illuminates in luminous starlight cyan (`#829fd8`), cooling to
-   celestial indigo (`#5c74b2`), and settles into midnight indigo (`#3a4c86`).
+   curve with a gentle tactile cushion. Its border uses the current theme's glint and highlight colors,
+   then settles into `TH.ubBorder`.
 3. **Synchronized Handoff**: Driven purely by `update(dt)` every frame (no race-prone `setTimeout`). When
    `A.swipeProgress >= 1.0`, the old exchange clears and the toad immediately ignites its third-eye brow star
    to begin the thought entrance bloom.
