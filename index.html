@@ -10,13 +10,22 @@
   <style>
     *{margin:0;padding:0;box-sizing:border-box}
     html,body{width:100%;height:100%;overflow:hidden;background:var(--sky,#101234)}
+    body.sky-loading { background: #101a25; }
+    body.sky-loading > :not(#skyLoading):not(script) { visibility: hidden; }
+    #skyLoading {
+      position: fixed; inset: 0; z-index: 20; display: grid; place-items: center;
+      background: #101a25; color: #dce3d3; font: 24px 'VT323', monospace;
+      pointer-events: none; opacity: 1; transition: opacity 0.3s ease;
+    }
+    body:not(.sky-loading) #skyLoading { opacity: 0; visibility: hidden; transition: opacity 0.3s ease, visibility 0s 0.3s; }
+    @media (prefers-reduced-motion: reduce) { #skyLoading { transition: none !important; } }
     #canvasWrapper { position:fixed; inset:0; width:100vw; height:100vh; overflow:hidden; z-index:0; }
     canvas#scene{image-rendering:pixelated;image-rendering:crisp-edges;-ms-interpolation-mode:nearest-neighbor;display:block; width:100%; height:100%;}
     #bubbleText, #sentMessage, #oldSentMessage {
       position: absolute;
       z-index: 2;
       display: none;
-      color: #dde4ff;
+      color: var(--chat-text, #dde4ff);
       font-family: 'VT323', monospace;
       text-align: left;
       line-height: 0.85;
@@ -41,7 +50,7 @@
       z-index: 0;
       background: transparent;
       border: none;
-      color: #dde4ff;
+      color: var(--chat-text, #dde4ff);
       font-family: 'VT323', monospace;
       text-align: left;
       line-height: 0.85;
@@ -57,12 +66,12 @@
       word-wrap: break-word;
     }
     #userInput::-webkit-scrollbar { display: none; }
-    #userInput::placeholder { color: #5b6a9a; }
+    #userInput::placeholder { color: var(--chat-muted, #5b6a9a); }
 
     #sendBtn {
       position: absolute;
       z-index: 0;
-      color: #6f7cae;
+      color: var(--chat-muted, #6f7cae);
       font-family: 'VT323', monospace;
       cursor: pointer;
       display: flex;
@@ -73,8 +82,8 @@
       user-select: none;
       transition: color 0.2s;
     }
-    #sendBtn:hover { color: #aab6e4; }
-    #sendBtn.active { color: #dde4ff; }
+    #sendBtn:hover { color: var(--chat-link, #aab6e4); }
+    #sendBtn.active { color: var(--chat-text, #dde4ff); }
 
     /* --- previous exchanges: the SAME boxes, scrolled back into view ---
        Transparent DOM text (the pixel bubble behind it is drawn on the
@@ -86,7 +95,7 @@
       display: none;
       flex-direction: column;
       justify-content: center;
-      color: #dde4ff;
+      color: var(--chat-text, #dde4ff);
       font-family: 'VT323', monospace;
       text-align: left;
       line-height: 0.85;
@@ -99,7 +108,7 @@
     }
 
     a.content-link {
-      color: #9fc0e8;
+      color: var(--chat-link, #9fc0e8);
       text-decoration: underline;
       text-underline-offset: 3px;
       text-decoration-thickness: 1px;
@@ -112,12 +121,12 @@
       transition: color 0.15s ease, text-decoration-color 0.15s ease;
     }
     a.content-link:hover {
-      color: #d2e4ff;
+      color: var(--chat-text, #d2e4ff);
       text-decoration: underline;
     }
 
     /* inline bold inside replies */
-    .md-b { color: #e6c468; }
+    .md-b { color: var(--chat-bold, #e6c468); }
 
     /* =====================================================================
        MOBILE LAYOUT (portrait phones / mobile widths: big centered toad,
@@ -231,7 +240,7 @@
       #mobileUserContent {
         position: relative;
         z-index: 1;
-        color: #dde4ff;
+        color: var(--chat-text, #dde4ff);
         font-family: 'VT323', monospace;
         font-size: 20px;
         line-height: 1.15;
@@ -250,15 +259,15 @@
         0% {
           opacity: 0;
           transform: translateY(calc(100vh - 120px)) scale(0.75);
-          filter: drop-shadow(0 0 22px rgba(130, 159, 216, 0.85));
+          filter: drop-shadow(0 0 22px rgb(var(--chat-glow-rgb, 130 159 216) / 0.85));
         }
         25% {
           opacity: 1;
-          filter: drop-shadow(0 0 16px rgba(130, 159, 216, 0.65));
+          filter: drop-shadow(0 0 16px rgb(var(--chat-glow-rgb, 130 159 216) / 0.65));
         }
         75% {
           transform: translateY(-3px);
-          filter: drop-shadow(0 2px 10px rgba(92, 116, 178, 0.4));
+          filter: drop-shadow(0 2px 10px rgb(var(--chat-glow-rgb, 130 159 216) / 0.4));
         }
         100% {
           opacity: 1;
@@ -291,16 +300,16 @@
         0% {
           opacity: 0;
           transform: scale(0.28) translateY(28px);
-          filter: drop-shadow(0 0 24px rgba(160, 216, 239, 0.95));
+          filter: drop-shadow(0 0 24px rgb(var(--chat-glow-rgb, 130 159 216) / 0.95));
         }
         35% {
           opacity: 1;
           transform: scale(0.74) translateY(10px);
-          filter: drop-shadow(0 0 16px rgba(120, 160, 208, 0.65));
+          filter: drop-shadow(0 0 16px rgb(var(--chat-glow-rgb, 130 159 216) / 0.65));
         }
         70% {
           transform: scale(1.035) translateY(-3px);
-          filter: drop-shadow(0 2px 10px rgba(92, 116, 178, 0.4));
+          filter: drop-shadow(0 2px 10px rgb(var(--chat-glow-rgb, 130 159 216) / 0.4));
         }
         100% {
           opacity: 1;
@@ -312,7 +321,7 @@
       #mobileToadContent {
         position: relative;
         z-index: 1;
-        color: #dde4ff;
+        color: var(--chat-text, #dde4ff);
         font-family: 'VT323', monospace;
         font-size: 20px;
         line-height: 1.15;
@@ -331,7 +340,7 @@
 
       #mobileToadMsg a,
       #mobileToadMsg .content-link {
-        color: #9fc0e8;
+        color: var(--chat-link, #9fc0e8);
         text-decoration: underline;
         text-underline-offset: 3px;
         text-decoration-thickness: 1px;
@@ -345,7 +354,7 @@
       }
       #mobileToadMsg a:hover,
       #mobileToadMsg .content-link:hover {
-        color: #d2e4ff;
+        color: var(--chat-text, #d2e4ff);
       }
 
       /* Long response: Full-Screen mode (moves user message up out of screen) */
@@ -449,7 +458,8 @@
     }
   </style>
 </head>
-<body>
+<body class="sky-loading">
+<div id="skyLoading" role="status" aria-live="polite">Finding your sky…</div>
 <div id="canvasWrapper">
   <canvas id="scene"></canvas>
   <canvas id="sceneTop" width="320" height="180"></canvas>
@@ -791,10 +801,8 @@
 
   /* =================================================================
      THEME
-     Scene colours that aren't gradients or toad/hill colours. Everything
-     except the chat-bubble pairs is rewritten by buildPalette() from the
-     live sky (see LIVING SKY below); the bubbles stay a constant midnight
-     blue so text reads the same over a noon sky or a storm.
+     Scene and chat colours are rebuilt together from the living sky.
+     Chat text keeps its own contrast floor so it stays readable.
      ================================================================= */
   const TH = {
     grassTip:'#557064', stem:'#1c3a28',
@@ -879,7 +887,7 @@
      -----------------------------------------------------------------
      The scene is lit by the visitor's ACTUAL sun, moon and weather:
        • where:   last visit's cache → /api/weather (host IP-geo) → a
-                  browser IP lookup; a timezone guess covers frame one.
+                  browser IP lookup; a timezone guess covers offline visits.
        • when:    the browser clock → real sun + moon position and moon
                   phase (compact SunCalc port below).
        • weather: Open-Meteo "current" conditions (via /api/weather, or
@@ -1012,13 +1020,10 @@
     const lat = south ? -30 : /^Europe/.test(tz) ? 48 : /^America/.test(tz) ? 38 : /^Asia/.test(tz) ? 30 : /^Africa/.test(tz) ? 8 : 35;
     return { lat, lon: Math.max(-180, Math.min(180, -std / 4)) };
   }
-  async function fetchJSON(url, ms = 8000){
-    const ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), ms);
-    try {
-      const r = await fetch(url, { signal: ctl.signal });
-      if (!r.ok) throw new Error('HTTP ' + r.status);
-      return await r.json();
-    } finally { clearTimeout(timer); }
+  async function fetchJSON(url, signal){
+    const r = await fetch(url, { signal });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return await r.json();
   }
   /* Precise position ONLY if the visitor already granted it — never prompt. */
   async function grantedCoords(){
@@ -1030,31 +1035,38 @@
     } catch { return null; }
   }
   const OM_CURRENT = 'temperature_2m,relative_humidity_2m,precipitation,weather_code,cloud_cover,wind_speed_10m,snow_depth,visibility';
-  async function fetchSky(){
+  async function fetchSky(signal){
     let at = (Q.has('lat') && Q.has('lon')) ? { lat: +Q.get('lat'), lon: +Q.get('lon') } : await grantedCoords();
     try {   // our proxy: the host's IP-geo (or an IP lookup) + Open-Meteo, in one call
-      const s = await fetchJSON('/api/weather' + (at ? `?lat=${at.lat}&lon=${at.lon}` : ''));
+      const s = await fetchJSON('/api/weather' + (at ? `?lat=${at.lat}&lon=${at.lon}` : ''), signal);
       if (typeof s.lat === 'number' && s.current) return s;
     } catch { /* static hosting / offline proxy: ask the same services directly */ }
     if (!at) {
-      const g = await fetchJSON('https://get.geojs.io/v1/ip/geo.json');
+      const g = await fetchJSON('https://get.geojs.io/v1/ip/geo.json', signal);
       at = { lat: +g.latitude, lon: +g.longitude, city: g.city || '' };
     }
-    const om = await fetchJSON(`https://api.open-meteo.com/v1/forecast?latitude=${at.lat.toFixed(3)}&longitude=${at.lon.toFixed(3)}&current=${OM_CURRENT}`);
+    const om = await fetchJSON(`https://api.open-meteo.com/v1/forecast?latitude=${at.lat.toFixed(3)}&longitude=${at.lon.toFixed(3)}&current=${OM_CURRENT}`, signal);
     return { lat: at.lat, lon: at.lon, city: at.city || '', current: om.current };
   }
   const SKY_CACHE = 'wiseToad.sky';
   let lastSkyFetch = 0;
-  async function refreshSky(){
+  async function refreshSky(timeout = 12000){
     lastSkyFetch = Date.now();
+    const ctl = new AbortController();
+    let timer;
     try {
-      const s = await fetchSky();
+      // One deadline covers location, proxy and direct fallback together.
+      // A timed-out lookup cannot apply a late startup correction.
+      const s = await Promise.race([fetchSky(ctl.signal), new Promise((_, reject) => {
+        timer = setTimeout(() => { ctl.abort(); reject(new Error('Sky lookup timed out')); }, timeout);
+      })]);
       if (!isFinite(s.lat) || !isFinite(s.lon)) return;
       if (!(Q.has('lat') && Q.has('lon'))) { ENV.latT = s.lat; ENV.lonT = s.lon; }
       ENV.city = s.city || '';
       if (!WX_PRESETS[Q.get('weather')]) ENV.W = readWeather(s.current || {});
       try { localStorage.setItem(SKY_CACHE, JSON.stringify({ lat: s.lat, lon: s.lon, city: s.city, current: s.current, at: Date.now() })); } catch {}
     } catch { /* offline: the clock still drives the sky; keep the last weather */ }
+    finally { clearTimeout(timer); }
   }
 
   /* ---------- sky → screen ----------
@@ -1183,6 +1195,51 @@
     for (let i = 0; i < SKY_N; i++) PAL.sky[i] = css([skyTmp[i * 3], skyTmp[i * 3 + 1], skyTmp[i * 3 + 2]]);
   }
 
+  /* All bubble surfaces (canvas + DOM, live + history) share this palette.
+     Warm parchment in sunlight, muted slate in wet weather, ink at night. */
+  function buildChatTheme(day, mid, hz, glow, glowA, overcast, fog, rain, storm, snow){
+    const damp = clamp01(overcast * 0.55 + rain * 0.25 + storm * 0.3 + fog * 0.3 + snow * 0.2);
+    const paper = mixC(mixC([240, 237, 216], glow, glowA * 0.18 * (1 - overcast)), [204, 220, 220], damp);
+    const ink = mixC([19, 28, 49], mid, 0.22);
+    const fill = mixC(ink, mixC(paper, hz, 0.12), day);
+    const userFill = mixC(fill, mixC([39, 54, 68], [220, 227, 202], day), 0.12);
+    const border = mixC(mixC([67, 86, 119], mid, 0.2), mixC([96, 111, 90], hz, 0.22), day);
+    const highlight = mixC(border, paper, 0.38);
+    const glint = mixC(highlight, mixC([183, 213, 238], glow, glowA * 0.4), 0.48);
+    TH.tbFill = css(fill); TH.ubFill = css(userFill);
+    TH.tbBorder = css(border); TH.ubBorder = css(mixC(border, highlight, 0.15));
+    TH.chatHighlight = css(highlight); TH.chatGlint = css(glint);
+    TH.tbRGB = fill; TH.ubRGB = userFill;
+    TH.tbBorderRGB = border; TH.ubBorderRGB = mixC(border, highlight, 0.15);
+
+    // Contrast uses the actual quantised colors painted by the canvas.
+    const luminance = c => c.map(v => ch(v) / 255).map(v => v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4)
+      .reduce((v, n, i) => v + n * [0.2126, 0.7152, 0.0722][i], 0);
+    const contrast = (a, b) => (Math.max(luminance(a), luminance(b)) + 0.05) / (Math.min(luminance(a), luminance(b)) + 0.05);
+    const score = c => Math.min(contrast(c, fill), contrast(c, userFill));
+    const text = score([255, 255, 255]) > score([15, 23, 24]) ? [255, 255, 255] : [15, 23, 24];
+    const readable = c => {
+      for (let i = 0; i < 20 && score(c) < 4.5; i++) c = mixC(c, text, 0.2);
+      return css(c);
+    };
+    const darkText = text[0] < 100;
+    const vars = {
+      '--chat-glow-rgb': glint.map(ch).join(' '),
+      '--chat-text': readable(mixC(text, fill, 0.08)),
+      '--chat-muted': readable(mixC(text, fill, 0.35)),
+      '--chat-link': readable(darkText ? [30, 66, 88] : [166, 207, 239]),
+      '--chat-bold': readable(darkText ? [103, 61, 24] : [230, 196, 104]),
+    };
+    for (const [key, value] of Object.entries(vars)) document.documentElement.style.setProperty(key, value);
+    drawInputBubble();
+    if (MQ.matches) {
+      for (const [id, isUser] of [['mobileUserBg', true], ['mobileToadBg', false]]) {
+        const canvas = document.getElementById(id);
+        if (canvas.parentElement.style.display !== 'none') renderThoughtCloud(canvas, isUser);
+      }
+    }
+  }
+
   const THEME_META = document.querySelector('meta[name="theme-color"]');
   function buildPalette(){
     const el = ENV.sunAlt;
@@ -1252,6 +1309,8 @@
     ALB.grass.forEach((c, i) => { GCOLS[i] = css(lit(c)); });
     const fGain = 1 + nightF * 0.7;                                     // pale petals glow faintly under the moon
     ALB.flowers.forEach((f, i) => { FCOLS[i] = [css(lit(f[0], fGain)), css(lit(f[1], fGain))]; });
+
+    buildChatTheme(dayF, mid, hz, k.glow, k.glowA, o, fog, rain, storm, snow);
 
     /* sky bodies + sky life */
     PAL.sunVis = (1 - o * 0.96) * (1 - fog * 0.55);
@@ -1422,8 +1481,8 @@
     MW = c;
   }
 
-  /* ---------- start: right sky on frame one, then refine from the network ---------- */
-  function initSky(){
+  /* ---------- resolve the initial sky before revealing any of the scene ---------- */
+  async function initSky(){
     let cache = null;
     try { cache = JSON.parse(localStorage.getItem(SKY_CACHE)); } catch {}
     const fixed = Q.has('lat') && Q.has('lon');
@@ -1432,12 +1491,13 @@
     const preset = WX_PRESETS[Q.get('weather')];
     ENV.W = preset ? Object.assign({}, WX_FAIR, preset)
           : (cache && cache.current && Date.now() - cache.at < 45 * 60e3) ? readWeather(cache.current) : Object.assign({}, WX_FAIR);
-    Object.assign(ENV, ENV.W, { W: ENV.W });
+    if (!(fixed && preset)) await refreshSky(4500);
+    ENV.lat = ENV.latT; ENV.lon = ENV.lonT;
+    Object.assign(ENV, ENV.W);
     for (const c of CLOUDS) c.a = ENV.cloud > c.thr ? 1 : 0;
     buildMilkyWay();
     updateSkyBodies();
     buildPalette();
-    if (!(fixed && preset)) refreshSky();
     setInterval(() => { if (!document.hidden) refreshSky(); }, 15 * 60e3);
     document.addEventListener('visibilitychange', () => {
       if (!document.hidden && Date.now() - lastSkyFetch > 10 * 60e3) refreshSky();
@@ -1539,7 +1599,6 @@
      ================================================================= */
   const rv=(x,y,w,h,c)=>{G.fillStyle=c;G.fillRect(x|0,y|0,w|0,h|0)};
   const d=(x,y,c)=>rv(x,y,1,1,c);
-  drawInputBubble(); // render the mobile input bubble once (static pixel art)
 
   /* --- Bresenham pixel-line (only draws within yMin..yMax) --- */
   function pxLine(x0,y0,x1,y1,c,yMin,yMax){
@@ -2191,10 +2250,10 @@
     const step6 = (t * 6)|0;
     const step4 = (t * 4)|0;
 
-    const fill = '#141e42';
+    const fill = TH.tbFill;
     // Active celestial border highlight during entrance bloom
-    const border = (isIntro && scale < 0.98) ? '#5c74b2' : '#33437a';
-    const hl = (isIntro && scale < 0.98) ? '#a0d8ef' : '#4e6298';
+    const border = (isIntro && scale < 0.98) ? TH.chatHighlight : TH.tbBorder;
+    const hl = (isIntro && scale < 0.98) ? TH.chatGlint : TH.chatHighlight;
 
     const midX = cx + 33;
     const midY = cy + 15;
@@ -2923,14 +2982,14 @@
     by += A.scroll;   // slide down with the scroll-back view (0 in normal use)
 
     // Active celestial starlight border during the bloom, settling into calm border
-    let activeBorder = (A.bubbleProgress < 0.6) ? '#829fd8' : ((A.bubbleProgress < 0.95) ? '#5c74b2' : border);
+    let activeBorder = (A.bubbleProgress < 0.6) ? TH.chatGlint : ((A.bubbleProgress < 0.95) ? TH.chatHighlight : border);
     let activeFill = fill;
 
     if (A.chatState === 'SWIPING_UP') {
       const fade = Math.max(0, Math.min(1, (A.oldBy + 40) / 60));
       if (fade < 0.95) {
-        activeFill = `rgba(22,34,74,${fade.toFixed(2)})`;
-        activeBorder = `rgba(51,67,122,${fade.toFixed(2)})`;
+        activeFill = cssA(TH.tbRGB, fade);
+        activeBorder = cssA(TH.tbBorderRGB, fade);
       }
     }
 
@@ -3034,8 +3093,8 @@
         const oh = A.oldUserTh|0;
         const obx = 10;
         const oby = (A.oldUserBy + A.scroll)|0;
-        const oFill = (oldFade < 0.95) ? `rgba(28,41,80,${oldFade.toFixed(2)})` : fill;
-        const oBorder = (oldFade < 0.95) ? `rgba(58,76,134,${oldFade.toFixed(2)})` : border;
+        const oFill = (oldFade < 0.95) ? cssA(TH.ubRGB, oldFade) : fill;
+        const oBorder = (oldFade < 0.95) ? cssA(TH.ubBorderRGB, oldFade) : border;
 
         rv(obx+2, oby, ow-4, oh, oFill);
         rv(obx, oby+2, ow, oh-4, oFill);
@@ -3064,9 +3123,9 @@
       let activeBorder = border;
       if (A.chatState === 'SWIPING_UP') {
         if (A.swipeProgress < 0.60) {
-          activeBorder = '#829fd8'; // luminous starlight cyan during ascent
+          activeBorder = TH.chatGlint;
         } else if (A.swipeProgress < 0.88) {
-          activeBorder = '#5c74b2'; // cooling celestial indigo
+          activeBorder = TH.chatHighlight;
         }
       }
 
@@ -3170,8 +3229,15 @@
   window.addEventListener('resize',resize);
   resize();
 
-  initSky();                         // the visitor's real sun, moon and weather
-  requestAnimationFrame(loop);
+  initSky().then(() => {
+    requestAnimationFrame(() => {
+      update(0);
+      render();
+      document.body.classList.remove('sky-loading');
+      document.getElementById('skyLoading').setAttribute('aria-hidden', 'true');
+      requestAnimationFrame(loop);
+    });
+  });
 
   function escapeHTML(str) {
     return str.replace(/[&<>'"]/g, 
@@ -3269,10 +3335,10 @@
     ctx.imageSmoothingEnabled = false;
     ctx.clearRect(0, 0, rw, rh);
 
-    const fill = isUser ? '#1c2950' : '#141e42';
-    const border = isUser ? '#3a4c86' : '#33437a';
-    const hl = isUser ? '#5c74b2' : '#4e6298';
-    const glint = isUser ? '#829fd8' : '#a0d8ef';
+    const fill = isUser ? TH.ubFill : TH.tbFill;
+    const border = isUser ? TH.ubBorder : TH.tbBorder;
+    const hl = TH.chatHighlight;
+    const glint = TH.chatGlint;
 
     const d = (x, y, col) => {
       if (x >= 0 && x < rw && y >= 0 && y < rh) {
