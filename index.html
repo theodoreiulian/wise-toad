@@ -15,10 +15,41 @@
     #skyLoading {
       position: fixed; inset: 0; z-index: 20; display: grid; place-items: center;
       background: #101a25; color: #dce3d3; font: 24px 'VT323', monospace;
+      padding: 24px; text-align: center;
       pointer-events: none; opacity: 1; transition: opacity 0.3s ease;
     }
+    .toad-loading-content { display: grid; justify-items: center; gap: 20px; }
+    .toad-loading-art { width: 160px; height: 144px; overflow: visible; shape-rendering: crispEdges; }
+    .toad-loading-breath {
+      transform-box: fill-box; transform-origin: center bottom;
+      animation: toad-loading-breathe 3.2s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+    }
+    .toad-loading-eyes { animation: toad-loading-wake 3.2s steps(1, end) infinite; }
+    .toad-loading-mote { animation: toad-loading-drift 2.8s ease-in-out infinite; }
+    .toad-loading-mote:nth-child(2) { animation-delay: -1.1s; }
+    .toad-loading-mote:nth-child(3) { animation-delay: -1.9s; }
+    .toad-loading-caption { font-size: clamp(24px, 5vw, 28px); line-height: 1.15; }
+    .toad-loading-dots { display: flex; gap: 8px; }
+    .toad-loading-dots span {
+      width: 4px; height: 4px; background: #c5b978;
+      animation: toad-loading-pulse 1.5s ease-in-out infinite;
+    }
+    .toad-loading-dots span:nth-child(2) { animation-delay: 0.2s; }
+    .toad-loading-dots span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes toad-loading-breathe { 0%, 100% { transform: scaleY(1); } 50% { transform: scaleY(1.035); } }
+    @keyframes toad-loading-wake { 0%, 58%, 72%, 100% { opacity: 0; } 60%, 76% { opacity: 1; } }
+    @keyframes toad-loading-drift {
+      0%, 100% { opacity: 0.25; transform: translateY(2px); }
+      50% { opacity: 0.85; transform: translateY(-4px); }
+    }
+    @keyframes toad-loading-pulse { 0%, 100% { opacity: 0.25; } 50% { opacity: 1; } }
     body:not(.sky-loading) #skyLoading { opacity: 0; visibility: hidden; transition: opacity 0.3s ease, visibility 0s 0.3s; }
-    @media (prefers-reduced-motion: reduce) { #skyLoading { transition: none !important; } }
+    body:not(.sky-loading) #skyLoading * { animation: none; }
+    @media (prefers-reduced-motion: reduce) {
+      #skyLoading { transition: none !important; }
+      #skyLoading * { animation: none !important; }
+      .toad-loading-eyes { opacity: 0; }
+    }
     #canvasWrapper { position:fixed; inset:0; width:100vw; height:100vh; overflow:hidden; z-index:0; }
     canvas#scene{image-rendering:pixelated;image-rendering:crisp-edges;-ms-interpolation-mode:nearest-neighbor;display:block; width:100%; height:100%;}
     #bubbleText, #sentMessage, #oldSentMessage {
@@ -459,7 +490,37 @@
   </style>
 </head>
 <body class="sky-loading">
-<div id="skyLoading" role="status" aria-live="polite">Finding your sky…</div>
+<div id="skyLoading" role="status" aria-live="polite">
+  <div class="toad-loading-content">
+    <svg class="toad-loading-art" viewBox="0 0 80 72" aria-hidden="true" focusable="false">
+      <!-- A tiny lotus-pose companion, drawn on the same square pixel grid as the meadow. -->
+      <path fill="#263d35" d="M12 64h56v2H12zM8 62h4v4H8zM68 62h4v4h-4zM18 58h2v6h-2zM60 60h2v4h-2z"/>
+      <g class="toad-loading-breath">
+        <path fill="#355b43" d="M16 54h48v8H16zM12 58h12v6H12zM56 58h12v6H56z"/>
+        <path fill="#527751" d="M20 54h17v6H20zM43 54h17v6H43z"/>
+        <path fill="#456d4c" d="M24 29h32v28H24zM18 32h44v9H18zM16 39h8v17h-8zM56 39h8v17h-8z"/>
+        <path fill="#719060" d="M28 35h24v18H28zM32 39h16v12H32z"/>
+        <path fill="#8caa72" d="M34 40h12v8H34z"/>
+        <path fill="#355b43" d="M14 53h12v5H14zM54 53h12v5H54zM28 54h24v5H28z"/>
+        <path fill="#527751" d="M22 14h36v17H22zM18 18h44v11H18zM26 11h28v5H26zM19 8h12v12H19zM49 8h12v12H49z"/>
+        <path fill="#719060" d="M22 10h7v3h-7zM52 10h7v3h-7zM26 16h28v10H26z"/>
+        <path fill="#355b43" d="M24 18h10v2H24zM46 18h10v2H46zM31 27h18v2H31zM34 23h2v2h-2zM44 23h2v2h-2z"/>
+        <path fill="#3d6247" d="M36 14h3v2h-3zM54 24h3v2h-3zM23 26h2v2h-2zM26 38h2v3h-2zM50 46h2v2h-2z"/>
+        <g class="toad-loading-eyes">
+          <path fill="#192d26" d="M24 17h10v3H24zM46 17h10v3H46z"/>
+          <path fill="#dac77d" d="M28 17h2v3h-2zM50 17h2v3h-2z"/>
+        </g>
+      </g>
+      <g fill="#c5b978">
+        <path class="toad-loading-mote" d="M9 29h2v2H9z"/>
+        <path class="toad-loading-mote" d="M68 18h2v2h-2z"/>
+        <path class="toad-loading-mote" d="M65 43h2v2h-2z"/>
+      </g>
+    </svg>
+    <span class="toad-loading-caption">Waking up the Toad…</span>
+    <div class="toad-loading-dots" aria-hidden="true"><span></span><span></span><span></span></div>
+  </div>
+</div>
 <div id="canvasWrapper">
   <canvas id="scene"></canvas>
   <canvas id="sceneTop" width="320" height="180"></canvas>
