@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80" shape-rendering="crispEdges">
+  <title>Wise Toad</title>
+  <rect width="80" height="80" rx="12" fill="#101a25"/>
+  <g transform="translate(0 2)">
+    <path fill="#355b43" d="M16 54h48v8H16zM12 58h12v6H12zM56 58h12v6H56z"/>
+    <path fill="#527751" d="M20 54h17v6H20zM43 54h17v6H43z"/>
+    <path fill="#456d4c" d="M24 29h32v28H24zM18 32h44v9H18zM16 39h8v17h-8zM56 39h8v17h-8z"/>
+    <path fill="#719060" d="M28 35h24v18H28zM32 39h16v12H32z"/>
+    <path fill="#8caa72" d="M34 40h12v8H34z"/>
+    <path fill="#355b43" d="M14 53h12v5H14zM54 53h12v5H54zM28 54h24v5H28z"/>
+    <path fill="#527751" d="M22 14h36v17H22zM18 18h44v11H18zM26 11h28v5H26zM19 8h12v12H19zM49 8h12v12H49z"/>
+    <path fill="#719060" d="M22 10h7v3h-7zM52 10h7v3h-7zM26 16h28v10H26z"/>
+    <path fill="#355b43" d="M24 18h10v2H24zM46 18h10v2H46zM31 27h18v2H31zM34 23h2v2h-2zM44 23h2v2h-2z"/>
+    <path fill="#3d6247" d="M36 14h3v2h-3zM54 24h3v2h-3zM23 26h2v2h-2zM26 38h2v3h-2zM50 46h2v2h-2z"/>
+    <path fill="#c5b978" d="M39 13h2v2h-2zM9 29h2v2H9zM68 18h2v2h-2z"/>
+  </g>
+</svg>

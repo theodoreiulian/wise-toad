@@ -37,6 +37,23 @@ last cached weather; the Toad stays silent without the chat proxy.
 `?lat=48.85&lon=2.35`, `?weather=clear|partly|cloudy|overcast|fog|drizzle|rain|showers|storm|snow|frost`.
 `window.ENV` exposes the live state (set `ENV.W` to a new weather object to watch it ease in).
 
+## SEO (wisetoad.net)
+
+Canonical host is **https://wisetoad.net/** (`www.` and `wise-toad.netlify.app` 301 to it; the latter
+via `netlify.toml`). `index.html`'s `<head>` carries the title/description, canonical, Open Graph +
+Twitter cards (`wise-toad-meditating-frog.jpg`, 1200×630), icons/manifest, and JSON-LD (`WebSite` with brand
+`alternateName`s, `Organization`, `WebApplication` with every name variant: wise frog, Buddhist
+toad/frog, Zen toad/frog, philosopher toad/frog…). The body has a screen-reader-only `<header>` (h1 +
+description), a focus-revealed `#aboutLink` to `/about/`, and a `<noscript>` intro, so crawlers get
+text even though the scene is canvas. `about/index.html` is a standalone, deliberately un-SEO-looking About
+page in a meditative voice (self-contained IIFE: a scroll-driven night-to-dawn sky canvas, the toad on
+a lily pad who answers taps with the meadow's thinking sequence (third-eye spark, rising orbs, thought
+cloud, golden pearl) and a stepped speech-bubble bloom, a Sengai ink frog that paints itself stroke by stroke as you scroll (and unpaints if you
+scroll back), and easter eggs listed in a comment
+at the top of its script). Keep its text short: one continuous text straight on the sky, no boxes or section headings, one big call-to-action button at the end. Don't add keyword lists or mention the weather mirroring there. Also: `robots.txt`, `sitemap.xml`
+(bump `lastmod` when content changes), `llms.txt`, `404.html`. Keep the title and
+description consistent across `index.html`, `about/index.html`, `llms.txt` and `site.webmanifest`.
+
 ## Coordinate system (read this first)
 
 The whole project thinks in a fixed **320×180 internal pixel grid** (`const W = 320, H = 180`).

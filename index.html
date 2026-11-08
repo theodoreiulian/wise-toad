@@ -3,9 +3,82 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>Wise Toad</title>
-  <meta name="description" content="A lo-fi pixel art meadow where a meditating toad sits beneath your own sky: the same time of day, sun, moon and weather as wherever you are.">
+  <title>Wise Toad · Talk to the Wise Frog, a Buddhist Philosopher Toad</title>
+  <meta name="description" content="Wise Toad (wisetoad.net) is a meditating philosopher toad, the wise frog of a pixel-art meadow. Ask the Buddhist toad anything beneath your own real sky, weather and moon. Free.">
   <meta name="theme-color" content="#101234">
+  <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1">
+  <meta name="author" content="Wise Toad">
+  <meta name="application-name" content="Wise Toad">
+  <meta name="apple-mobile-web-app-title" content="Wise Toad">
+  <link rel="canonical" href="https://wisetoad.net/">
+  <link rel="alternate" hreflang="en" href="https://wisetoad.net/">
+  <link rel="alternate" hreflang="x-default" href="https://wisetoad.net/">
+  <link rel="icon" href="/favicon.ico" sizes="48x48">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="manifest" href="/site.webmanifest">
+  <!-- Open Graph / social cards -->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Wise Toad">
+  <meta property="og:url" content="https://wisetoad.net/">
+  <meta property="og:title" content="Wise Toad · Talk to the Wise Frog, a Buddhist Philosopher Toad">
+  <meta property="og:description" content="A meditating philosopher toad in a pixel-art meadow under your own real sky. Ask him anything.">
+  <meta property="og:image" content="https://wisetoad.net/wise-toad-meditating-frog.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="The Wise Toad, a meditating pixel-art toad (or frog), sitting in a meadow at sunset">
+  <meta property="og:locale" content="en_US">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Wise Toad · Talk to the Wise Frog, a Buddhist Philosopher Toad">
+  <meta name="twitter:description" content="A meditating philosopher toad in a pixel-art meadow under your own real sky. Ask him anything.">
+  <meta name="twitter:image" content="https://wisetoad.net/wise-toad-meditating-frog.jpg">
+  <meta name="twitter:image:alt" content="The Wise Toad, a meditating pixel-art toad (or frog), sitting in a meadow at sunset">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebSite",
+        "@id": "https://wisetoad.net/#website",
+        "url": "https://wisetoad.net/",
+        "name": "Wise Toad",
+        "alternateName": ["WiseToad", "Wise-Toad", "The Wise Toad", "wisetoad.net"],
+        "description": "A meditating philosopher toad in a pixel-art meadow that mirrors your real sky. Talk to him about anything.",
+        "inLanguage": "en",
+        "publisher": { "@id": "https://wisetoad.net/#org" }
+      },
+      {
+        "@type": "Organization",
+        "@id": "https://wisetoad.net/#org",
+        "name": "Wise Toad",
+        "alternateName": ["WiseToad", "Wise-Toad"],
+        "url": "https://wisetoad.net/",
+        "logo": { "@type": "ImageObject", "url": "https://wisetoad.net/icon-512.png", "width": 512, "height": 512 }
+      },
+      {
+        "@type": "WebApplication",
+        "@id": "https://wisetoad.net/#app",
+        "name": "Wise Toad",
+        "alternateName": ["WiseToad", "Wise-Toad", "The Wise Toad", "Wise Frog", "The Wise Frog", "Buddhist Toad", "Buddhist Frog", "Philosopher Toad", "Philosopher Frog", "Zen Toad", "Zen Frog", "Meditating Toad", "Meditating Frog", "Toad Sage", "Sage Frog", "Enlightened Toad", "Monk Toad", "Toad Philosopher", "Frog Philosopher"],
+        "url": "https://wisetoad.net/",
+        "image": "https://wisetoad.net/wise-toad-meditating-frog.jpg",
+        "screenshot": "https://wisetoad.net/wise-toad-meditating-frog.jpg",
+        "description": "Wise Toad is a free web companion: a meditating, Buddhist-leaning philosopher toad (some call him the wise frog) who sits in a living pixel-art meadow and talks with you about life, philosophy and whatever is on your mind. The meadow follows your real time of day, sun, moon and weather.",
+        "applicationCategory": "LifestyleApplication",
+        "operatingSystem": "Any (web browser)",
+        "browserRequirements": "Requires JavaScript and an HTML5 canvas",
+        "isAccessibleForFree": true,
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+        "inLanguage": "en",
+        "keywords": "wise toad, wisetoad, wise-toad, wise frog, buddhist toad, buddhist frog, philosopher toad, philosopher frog, zen toad, zen frog, meditating toad, meditating frog, toad sage, sage frog, enlightened toad, talk to a toad, ai philosopher, pixel art",
+        "publisher": { "@id": "https://wisetoad.net/#org" },
+        "isPartOf": { "@id": "https://wisetoad.net/#website" }
+      }
+    ]
+  }
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
   <style>
     *{margin:0;padding:0;box-sizing:border-box}
@@ -50,6 +123,25 @@
       #skyLoading * { animation: none !important; }
       .toad-loading-eyes { opacity: 0; }
     }
+    .sr-only {
+      position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px;
+      overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; border: 0;
+    }
+    #aboutLink {
+      position: fixed; top: 8px; left: 8px; z-index: 30;
+      padding: 6px 12px; background: #101a25; color: #f1e7c4; border: 2px solid #c5b978;
+      font: 22px 'VT323', monospace; text-decoration: none;
+    }
+    #aboutLink:not(:focus):not(:focus-visible) {
+      width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden;
+      clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; border: 0;
+    }
+    .noscript-intro {
+      position: fixed; inset: 0; z-index: 40; display: grid; place-content: center; gap: 12px;
+      padding: 24px; background: #101a25; color: #dce3d3; font: 24px/1.2 'VT323', monospace; text-align: center;
+    }
+    .noscript-intro h1 { font-size: 48px; font-weight: normal; color: #f1e7c4; }
+    .noscript-intro a { color: #c5b978; }
     #canvasWrapper { position:fixed; inset:0; width:100vw; height:100vh; overflow:hidden; z-index:0; }
     canvas#scene{image-rendering:pixelated;image-rendering:crisp-edges;-ms-interpolation-mode:nearest-neighbor;display:block; width:100%; height:100%;}
     #bubbleText, #sentMessage, #oldSentMessage {
@@ -490,6 +582,18 @@
   </style>
 </head>
 <body class="sky-loading">
+<header class="sr-only">
+  <h1>Wise Toad</h1>
+  <p>Wise Toad is a meditating philosopher toad, the wise frog of a quiet pixel-art meadow. Some call him the Buddhist toad, the Zen frog or the philosopher frog. Type a message to talk with him about life, philosophy, grief, love or anything on your mind. The meadow follows your real sky: the same time of day, sun, moon phase and weather as wherever you are.</p>
+</header>
+<a id="aboutLink" href="/about/">About the Wise Toad</a>
+<noscript>
+  <div class="noscript-intro">
+    <h1>Wise Toad</h1>
+    <p>A meditating philosopher toad (the wise frog, the Buddhist toad) waits in a living pixel-art meadow.</p>
+    <p>Please turn on JavaScript to speak with him, or <a href="/about/">read about the Wise Toad</a>.</p>
+  </div>
+</noscript>
 <div id="skyLoading" role="status" aria-live="polite">
   <div class="toad-loading-content">
     <svg class="toad-loading-art" viewBox="0 0 80 72" aria-hidden="true" focusable="false">
@@ -522,13 +626,13 @@
   </div>
 </div>
 <div id="canvasWrapper">
-  <canvas id="scene"></canvas>
+  <canvas id="scene" role="img" aria-label="Pixel-art meadow under your current sky, with the Wise Toad meditating in the grass"></canvas>
   <canvas id="sceneTop" width="320" height="180"></canvas>
   <div id="bubbleText"></div>
   <div id="sentMessage"></div>
   <div id="oldSentMessage"></div>
   <canvas id="inputBubbleBg" width="64" height="10"></canvas>
-  <textarea id="userInput" placeholder="Speak to the Toad"></textarea>
+  <textarea id="userInput" placeholder="Speak to the Toad" aria-label="Speak to the Wise Toad"></textarea>
   <canvas id="inputBubbleBorder" width="64" height="10"></canvas>
   <div id="sendBtn" title="Send">&gt;</div>
   <div id="histLayer"></div>

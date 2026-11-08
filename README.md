@@ -2,7 +2,7 @@
 
 A meditating toad sits in a grassy meadow beneath *your* sky — the same time of day and the same weather as wherever you are. Talk to him — he's wise.
 
-**Try it live → [wise-toad.netlify.app](https://wise-toad.netlify.app)**
+**Try it live → [wisetoad.net](https://wisetoad.net)**
 
 ## What it is
 
@@ -89,6 +89,9 @@ The client only depends on a `POST /api/chat` endpoint that accepts `{ contents 
 | `netlify/functions/chat.js` | Serverless Gemini proxy (Netlify) |
 | `netlify/functions/weather.mjs` | Location + weather (Netlify, uses `context.geo`) |
 | `local-server.js` | Local Node dev server with LAN access |
+| `about/index.html` | The About page: an interactive pixel-art scroll from night to dawn |
+| `robots.txt`, `sitemap.xml`, `llms.txt`, `site.webmanifest`, `404.html` | Search/AI crawler files, PWA manifest, not-found page |
+| `favicon.*`, `icon-*.png`, `apple-touch-icon.png`, `wise-toad-meditating-frog.jpg` | Icons and the 1200×630 social share image |
 
 - Single 320×180 internal pixel grid, `image-rendering: pixelated`
 - Deterministic RNG (`mulberry(7)`) — same field layout every reload
