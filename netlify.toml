@@ -2,6 +2,14 @@
   command = ""
   publish = "."
 
+# One canonical host for search engines: the Netlify subdomain 301s to wisetoad.net
+# (www.wisetoad.net is already redirected by Netlify's primary-domain setting).
+[[redirects]]
+  from = "https://wise-toad.netlify.app/*"
+  to = "https://wisetoad.net/:splat"
+  status = 301
+  force = true
+
 [[redirects]]
   from = "/api/weather"
   to = "/.netlify/functions/weather"
@@ -16,3 +24,28 @@
   from = "/api/*"
   to = "/.netlify/functions/chat"
   status = 200
+
+[[headers]]
+  for = "/api/*"
+  [headers.values]
+    X-Robots-Tag = "noindex"
+
+[[headers]]
+  for = "/site.webmanifest"
+  [headers.values]
+    Content-Type = "application/manifest+json"
+
+[[headers]]
+  for = "/*.png"
+  [headers.values]
+    Cache-Control = "public, max-age=604800"
+
+[[headers]]
+  for = "/*.jpg"
+  [headers.values]
+    Cache-Control = "public, max-age=604800"
+
+[[headers]]
+  for = "/favicon.*"
+  [headers.values]
+    Cache-Control = "public, max-age=604800"

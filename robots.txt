@@ -1,0 +1,6 @@
+# Wise Toad · https://wisetoad.net
+User-agent: *
+Allow: /
+Disallow: /api/
+
+Sitemap: https://wisetoad.net/sitemap.xml

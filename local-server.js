@@ -73,17 +73,37 @@ const server = http.createServer((req, res) => {
   }
 
   /* ---- Static file server (query strings like ?time=19:30 are ignored) ---- */
-  const filePath = urlPath === '/' ? './index.html' : '.' + urlPath;
+  const MIME = {
+    '.html': 'text/html; charset=utf-8', '.js': 'application/javascript', '.mjs': 'application/javascript',
+    '.css': 'text/css', '.json': 'application/json', '.webmanifest': 'application/manifest+json',
+    '.xml': 'application/xml', '.txt': 'text/plain; charset=utf-8', '.svg': 'image/svg+xml',
+    '.png': 'image/png', '.jpg': 'image/jpeg', '.ico': 'image/x-icon',
+  };
+  let rel;
+  try { rel = decodeURIComponent(urlPath); } catch { rel = urlPath; }
+  if (rel.endsWith('/')) rel += 'index.html';
+  const root = path.resolve(__dirname);
+  const filePath = path.resolve(root, '.' + rel);
+  if (!filePath.startsWith(root + path.sep) || path.basename(filePath).startsWith('.')) {
+    res.writeHead(404);
+    res.end('Not found');
+    return;
+  }
   fs.readFile(filePath, (err, data) => {
     if (err) {
-      res.writeHead(404);
-      res.end('Not found');
+      /* /about -> /about/ like the real hosts; anything else gets the 404 page */
+      if (fs.existsSync(path.join(filePath, 'index.html'))) {
+        res.writeHead(301, { Location: urlPath + '/' });
+        res.end();
+        return;
+      }
+      fs.readFile(path.join(root, '404.html'), (e404, page) => {
+        res.writeHead(404, { 'Content-Type': 'text/html; charset=utf-8' });
+        res.end(e404 ? 'Not found' : page);
+      });
       return;
     }
-    const ext = path.extname(filePath);
-    const type = ext === '.html' ? 'text/html'
-               : ext === '.js'  ? 'application/javascript'
-               : 'text/plain';
+    const type = MIME[path.extname(filePath)] || 'application/octet-stream';
     res.writeHead(200, { 'Content-Type': type });
     res.end(data);
   });

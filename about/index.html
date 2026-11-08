@@ -1,0 +1,801 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>About the Wise Toad · A Zen Frog You Can Talk To</title>
+  <meta name="description" content="Who is the Wise Toad? A meditating toad on a lily pad: part Zen frog, part Buddhist toad, part philosopher frog. Sit with him and ask him anything, free.">
+  <meta name="theme-color" content="#05071a">
+  <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1">
+  <link rel="canonical" href="https://wisetoad.net/about/">
+  <link rel="icon" href="/favicon.ico" sizes="48x48">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="manifest" href="/site.webmanifest">
+  <meta property="og:type" content="article">
+  <meta property="og:site_name" content="Wise Toad">
+  <meta property="og:url" content="https://wisetoad.net/about/">
+  <meta property="og:title" content="About the Wise Toad · A Zen Frog You Can Talk To">
+  <meta property="og:description" content="A meditating toad on a lily pad: part Zen frog, part Buddhist toad, part philosopher frog. Sit with him and ask him anything.">
+  <meta property="og:image" content="https://wisetoad.net/wise-toad-meditating-frog.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="The Wise Toad, a meditating pixel-art toad (or frog), sitting in a meadow at sunset">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://wisetoad.net/wise-toad-meditating-frog.jpg">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "AboutPage",
+        "@id": "https://wisetoad.net/about/#page",
+        "url": "https://wisetoad.net/about/",
+        "name": "About the Wise Toad",
+        "description": "Who is the Wise Toad? A meditating toad on a lily pad: part Zen frog, part Buddhist toad, part philosopher frog. Sit with him and ask him anything, free.",
+        "inLanguage": "en",
+        "isPartOf": { "@id": "https://wisetoad.net/#website" },
+        "about": { "@id": "https://wisetoad.net/#app" },
+        "primaryImageOfPage": { "@id": "https://wisetoad.net/#image" },
+        "breadcrumb": { "@id": "https://wisetoad.net/about/#breadcrumb" }
+      },
+      {
+        "@type": "ImageObject",
+        "@id": "https://wisetoad.net/#image",
+        "url": "https://wisetoad.net/wise-toad-meditating-frog.jpg",
+        "contentUrl": "https://wisetoad.net/wise-toad-meditating-frog.jpg",
+        "width": 1200,
+        "height": 630,
+        "caption": "The Wise Toad, a meditating pixel-art toad (or frog), sitting in a meadow at sunset"
+      },
+      {
+        "@type": "WebApplication",
+        "@id": "https://wisetoad.net/#app",
+        "name": "Wise Toad",
+        "alternateName": ["WiseToad", "Wise-Toad", "The Wise Toad", "Wise Frog", "The Wise Frog", "Buddhist Toad", "Buddhist Frog", "Philosopher Toad", "Philosopher Frog", "Zen Toad", "Zen Frog", "Meditating Toad", "Meditating Frog", "Toad Sage", "Sage Frog", "Enlightened Toad", "Monk Toad", "Toad Philosopher", "Frog Philosopher"],
+        "url": "https://wisetoad.net/",
+        "image": { "@id": "https://wisetoad.net/#image" },
+        "applicationCategory": "LifestyleApplication",
+        "operatingSystem": "Any (web browser)",
+        "isAccessibleForFree": true,
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+      },
+      {
+        "@type": "BreadcrumbList",
+        "@id": "https://wisetoad.net/about/#breadcrumb",
+        "itemListElement": [
+          { "@type": "ListItem", "position": 1, "name": "Wise Toad", "item": "https://wisetoad.net/" },
+          { "@type": "ListItem", "position": 2, "name": "About", "item": "https://wisetoad.net/about/" }
+        ]
+      }
+    ]
+  }
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    :root{--ink:#dfe5d4;--dim:#9aa6b8;--gold:#e6c468;--cream:#f6e7b0;--line:#2a3566}
+    html{background:#05071a;color:var(--ink);font:22px/1.38 'VT323',ui-monospace,Menlo,monospace;-webkit-text-size-adjust:100%;scroll-behavior:smooth}
+    body{min-height:100vh;overflow-x:hidden}
+    canvas{image-rendering:pixelated;image-rendering:crisp-edges;display:block}
+    #sky{position:fixed;inset:0;width:100vw;height:100vh;z-index:0}
+    #fx{position:fixed;inset:0;width:100vw;height:100vh;z-index:15;pointer-events:none}
+    a{color:var(--gold)}
+
+
+    /* pixel buttons */
+    .btn{display:inline-block;font:inherit;font-size:26px;line-height:1;cursor:pointer;text-decoration:none;
+      color:#141018;background:var(--gold);padding:10px 18px 8px;border:0;position:relative;
+      box-shadow:0 -4px 0 0 #fff2c2,0 4px 0 0 #8a5a1c,-4px 0 0 0 #c99a3a,4px 0 0 0 #c99a3a,0 8px 0 0 rgba(0,0,0,.4);
+      transition:transform .08s steps(2)}
+    .btn:hover{background:#f3d98a}
+    .btn:active{transform:translateY(3px)}
+    .btn:focus-visible{outline:3px dashed var(--cream);outline-offset:8px}
+
+    /* hero */
+    main{position:relative;z-index:3;max-width:820px;margin:0 auto;padding:0 22px}
+    .hero{text-align:center;padding:56px 0 0}
+    h1{font-weight:normal;font-size:clamp(60px,13vw,112px);line-height:.9;margin:6px 0 0;
+      background:linear-gradient(100deg,#e9c86a 0 42%,#fff7d8 48% 52%,#e9c86a 58% 100%);background-size:320% 100%;
+      -webkit-background-clip:text;background-clip:text;color:transparent;
+      filter:drop-shadow(0 4px 0 #7a4f17) drop-shadow(0 6px 0 rgba(0,0,0,.45));
+      animation:glint 7s steps(28) infinite}
+    @keyframes glint{0%,55%{background-position:100% 0}100%{background-position:0 0}}
+    .pondwrap{position:relative;margin:4px auto 0;max-width:720px}
+    #pond{width:100%;height:auto;aspect-ratio:160/100;cursor:pointer;outline:none}
+    #pond:focus-visible{outline:3px dashed var(--cream);outline-offset:4px}
+    @property --bb{syntax:'<color>';inherits:true;initial-value:#33437a}
+    .says{position:absolute;left:50%;bottom:74%;z-index:2;opacity:0;pointer-events:none;width:max-content;max-width:min(88%,380px);
+      transform:translateX(-50%) scale(.18);transform-origin:50% 100%;
+      --bb:#33437a;background:#141e42;color:#dde4ff;font-size:clamp(20px,3.4vw,26px);line-height:1.05;padding:9px 16px 7px;text-align:center;
+      box-shadow:0 -3px 0 0 var(--bb),0 3px 0 0 var(--bb),-3px 0 0 0 var(--bb),3px 0 0 0 var(--bb),0 9px 0 0 rgba(0,0,0,.35)}
+    .says .t{display:inline-block;opacity:0}
+    .says::after{content:"";position:absolute;left:50%;top:100%;width:3px;height:3px;margin:3px 0 0 -1px;background:#141e42;
+      box-shadow:-6px 0 0 var(--bb),-3px 0 0 #141e42,3px 0 0 #141e42,6px 0 0 var(--bb),-3px 3px 0 var(--bb),0 3px 0 #141e42,3px 3px 0 var(--bb),0 6px 0 var(--bb)}
+    .says.bloom{animation:bubbleBloom .74s forwards}
+    .says.bloom .t{animation:textIn .45s steps(5) .3s forwards}
+    .says.out{opacity:1;transform:translateX(-50%) scale(1);animation:bubbleOut .42s steps(5) forwards}
+    .says.out .t{opacity:1}
+    @keyframes bubbleBloom{
+      0%{opacity:1;transform:translateX(-50%) scale(.18);--bb:#829fd8;filter:drop-shadow(0 0 16px rgba(130,159,216,.9));animation-timing-function:steps(1,end)}
+      14%{transform:translateX(-50%) scale(.42);animation-timing-function:steps(1,end)}
+      28%{transform:translateX(-50%) scale(.7);animation-timing-function:steps(1,end)}
+      42%{transform:translateX(-50%) scale(.9);filter:drop-shadow(0 0 12px rgba(130,159,216,.7));animation-timing-function:steps(1,end)}
+      56%{transform:translateX(-50%) scale(1.035);--bb:#5c74b2;animation-timing-function:steps(1,end)}
+      70%{opacity:1;transform:translateX(-50%) scale(1);filter:drop-shadow(0 0 7px rgba(130,159,216,.45));animation-timing-function:steps(1,end)}
+      100%{opacity:1;transform:translateX(-50%) scale(1);--bb:#33437a;filter:drop-shadow(0 0 0 rgba(130,159,216,0))}
+    }
+    @keyframes textIn{to{opacity:1}}
+    @keyframes bubbleOut{
+      0%{--bb:#5c74b2;filter:drop-shadow(0 0 6px rgba(160,216,239,.5))}
+      100%{opacity:0;transform:translateX(-50%) translateY(-16px) scale(.96);--bb:#a0d8ef;filter:drop-shadow(0 0 12px rgba(160,216,239,.8))}
+    }
+    .lead{max-width:640px;margin:120px auto 0;text-align:left;font-size:25px;line-height:1.5;color:#eef0e2;
+      text-shadow:0 2px 0 #05071a,2px 0 0 #05071a,-2px 0 0 #05071a,0 -2px 0 #05071a}
+
+    /* one long text, straight on the sky */
+    .story{max-width:640px;margin:30px auto 0;font-size:25px;line-height:1.5;color:#eef0e2;
+      text-shadow:0 2px 0 #05071a,2px 0 0 #05071a,-2px 0 0 #05071a,0 -2px 0 #05071a}
+    .story p{margin:0 0 30px}
+    p{margin:0 0 14px}
+    p:last-child{margin-bottom:0}
+    .reveal{opacity:0;transform:translateY(16px)}
+    .reveal.in{animation:rise .9s steps(6) forwards}
+    @keyframes rise{to{opacity:1;transform:none}}
+
+
+    /* ink painting */
+    .scroll-art{display:flex;gap:18px;align-items:stretch;justify-content:center;margin:8px auto 38px;text-shadow:none;max-width:560px;padding:16px 14px;background:#e9dfc3;
+      box-shadow:0 -4px 0 0 #6b4a2b,0 4px 0 0 #6b4a2b,-4px 0 0 0 #8a6a45,4px 0 0 0 #8a6a45,0 10px 0 0 rgba(0,0,0,.35)}
+    #ink{width:min(100%,420px);height:auto;aspect-ratio:120/84;min-width:0;flex:1 1 auto}
+    .verse{writing-mode:vertical-rl;color:#2a2620;font:20px/1.5 "Hiragino Mincho ProN","Yu Mincho","Noto Serif JP",serif;letter-spacing:3px;opacity:.85}
+
+
+    /* end pond */
+    .end{text-align:center;padding:64px 0 8px}
+    .btn-big{font-size:clamp(26px,4.4vw,33px);line-height:1.1;text-wrap:balance;padding:17px 32px 14px;
+      box-shadow:0 -5px 0 0 #fff2c2,0 5px 0 0 #8a5a1c,-5px 0 0 0 #c99a3a,5px 0 0 0 #c99a3a,0 10px 0 0 rgba(0,0,0,.45);
+      animation:beckon 3.2s steps(8) infinite}
+    .btn-big:active{transform:translateY(4px)}
+    @keyframes beckon{0%,100%{filter:drop-shadow(0 0 0 rgba(255,214,120,0))}50%{filter:drop-shadow(0 0 18px rgba(255,214,120,.55))}}
+    footer{position:relative;z-index:3;text-align:center;color:#f3ead6;font-size:19px;padding:40px 22px 46px;text-shadow:0 2px 0 #2a1834,2px 0 0 #2a1834,-2px 0 0 #2a1834,0 -2px 0 #2a1834}
+    footer a{color:#ffe7a0}
+
+
+    @media (max-width:560px){
+      html{font-size:21px}
+      .story{font-size:23px;margin-top:30px}
+      .lead{font-size:23px;margin-top:80px}
+      .pondwrap{margin-top:40px}
+      .btn-big{padding:15px 22px 12px}
+      .verse{font-size:15px;letter-spacing:1px}
+    }
+    @media (prefers-reduced-motion:reduce){
+      *,*::before,*::after{animation:none !important;transition:none !important}
+      .reveal{opacity:1;transform:none}
+      .says.bloom{opacity:1;transform:translateX(-50%) scale(1)}
+      .says.bloom .t{opacity:1}
+      .says.out{opacity:0}
+      html{scroll-behavior:auto}
+    }
+  </style>
+</head>
+<body>
+<canvas id="sky" aria-hidden="true"></canvas>
+<canvas id="fx" aria-hidden="true"></canvas>
+
+
+<main>
+  <section class="hero">
+    <h1>The Wise Toad</h1>
+    <div class="pondwrap">
+      <canvas id="pond" width="160" height="100" tabindex="0" role="button" aria-label="The Wise Toad, a meditating toad sitting on a lily pad. Tap him."></canvas>
+      <div class="says" id="says" aria-live="polite"></div>
+    </div>
+    <p class="lead">A meditating toad on a lily pad at the edge of a meadow. Sit with him a while and ask him anything.</p>
+  </section>
+
+  <article class="story">
+    <p class="reveal">The Wise Toad has sat by this pond longer than anyone remembers. He has no robe and no rules, only a long habit of noticing things, and he will tell you what he has noticed if you ask.</p>
+    <p class="reveal">Two centuries ago the Zen monk Sengai painted a frog beside a small joke: if sitting in meditation made you a Buddha, the frog would have got there first.</p>
+    <div class="scroll-art" id="sitting">
+      <canvas id="ink" width="120" height="84" role="img" aria-label="Ink painting of a meditating Zen frog, after the Zen monk Sengai, with a small red seal"></canvas>
+      <span class="verse" lang="ja">坐禅して人が仏になるならば</span>
+    </div>
+    <p class="reveal">The toad agrees. Sitting is only where it starts. You still have to look, and listen.</p>
+    <p class="reveal">Say hello and he says hello back. Bring him something heavy, a loss, a fear, a choice you can't make, and he slows down. He draws on the Buddha and Lao Tzu, Zhuangzi, Marcus Aurelius and Camus, and he loves the question a little more than the answer.</p>
+  </article>
+
+  <section class="end reveal" id="end">
+    <p><a class="btn btn-big" href="/">Go and sit with the Wise Toad &rarr;</a></p>
+  </section>
+</main>
+
+<footer>
+  <p><a href="/">wisetoad.net</a></p>
+</footer>
+
+<script>
+(() => {
+  'use strict';
+  /* Easter eggs, for whoever reads source: tap the toad seven times; type "ribbit";
+     the old code (up up down down left right left right b a); tap the moon; catch a
+     shooting star; catch the fly; sit still for a while. */
+  const RM = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const $ = (s) => document.querySelector(s);
+  const clamp = (v, a = 0, b = 1) => Math.max(a, Math.min(b, v));
+  const rnd = (a, b) => a + Math.random() * (b - a);
+  const mulberry = (s) => () => { s = (s + 0x6D2B79F5) | 0; let t = Math.imul(s ^ (s >>> 15), 1 | s); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+  const hex = (h) => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
+  const mix = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
+  const rgb = (c, a = 1) => `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${a})`;
+  const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5].map((v) => (v + 0.5) / 16);
+  const hash = (x, y) => { const s = Math.sin(x * 12.9898 + y * 78.233) * 43758.5453; return s - Math.floor(s); };
+  const ctx = (c) => { const g = c.getContext('2d'); g.imageSmoothingEnabled = false; return g; };
+  const fillEllipse = (g, cx, cy, rx, ry) => {
+    for (let y = -Math.floor(ry); y <= Math.floor(ry); y++) {
+      const w = Math.round(rx * Math.sqrt(Math.max(0, 1 - (y * y) / (ry * ry))));
+      g.fillRect(Math.round(cx - w), Math.round(cy + y), w * 2 + 1, 1);
+    }
+  };
+  const ringEllipse = (g, cx, cy, rx, ry, dotted) => {
+    const n = Math.max(24, Math.round((rx + ry) * 3));
+    for (let i = 0; i < n; i++) {
+      if (dotted && i % 2) continue;
+      const a = (i / n) * Math.PI * 2;
+      g.fillRect(Math.round(cx + Math.cos(a) * rx), Math.round(cy + Math.sin(a) * ry), 1, 1);
+    }
+  };
+
+
+  /* ---------------- tiny sounds, only ever after a key press or a tap ---------------- */
+  let AC = null;
+  function blip(f0, f1, dur, type = 'square', vol = 0.05, delay = 0) {
+    try {
+      AC = AC || new (window.AudioContext || window.webkitAudioContext)();
+      const t = AC.currentTime + delay, o = AC.createOscillator(), g = AC.createGain();
+      o.type = type; o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(f1, t + dur);
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      o.connect(g).connect(AC.destination); o.start(t); o.stop(t + dur + 0.05);
+    } catch {}
+  }
+
+  /* ---------------- the toad (same pixels as the meadow's loading toad) ---------------- */
+  const TOAD = [
+    ['#355b43', 'M16 54h48v8H16zM12 58h12v6H12zM56 58h12v6H56z', 0],
+    ['#527751', 'M20 54h17v6H20zM43 54h17v6H43z', 0],
+    ['#456d4c', 'M24 29h32v28H24zM18 32h44v9H18zM16 39h8v17h-8zM56 39h8v17h-8z', 1],
+    ['#719060', 'M28 35h24v18H28zM32 39h16v12H32z', 1],
+    ['#8caa72', 'M34 40h12v8H34z', 1],
+    ['#355b43', 'M14 53h12v5H14zM54 53h12v5H54zM28 54h24v5H28z', 0],
+    ['#527751', 'M22 14h36v17H22zM18 18h44v11H18zM26 11h28v5H26zM19 8h12v12H19zM49 8h12v12H49z', 1],
+    ['#719060', 'M22 10h7v3h-7zM52 10h7v3h-7zM26 16h28v10H26z', 1],
+    ['#355b43', 'M24 18h10v2H24zM46 18h10v2H46zM31 27h18v2H31zM34 23h2v2h-2zM44 23h2v2h-2z', 1],
+    ['#3d6247', 'M36 14h3v2h-3zM54 24h3v2h-3zM23 26h2v2h-2zM26 38h2v3h-2zM50 46h2v2h-2z', 1],
+  ].map(([c, d, b]) => ({ c: hex(c), b, r: [...d.matchAll(/M(\d+) (\d+)h(\d+)v(\d+)/g)].map((m) => m.slice(1).map(Number)) }));
+  const EYES = [[hex('#192d26'), [[24, 17, 10, 3], [46, 17, 10, 3]]], [hex('#dac77d'), [[28, 17, 2, 3], [50, 17, 2, 3]]]];
+  const lumOf = (c) => (c[0] * 0.3 + c[1] * 0.59 + c[2] * 0.11) / 255;
+  function tone(c, mode) {
+    if (mode === 'stone') { const v = 60 + lumOf(c) * 150; return [v, v, v * 1.05]; }
+    if (mode === 'gold') return mix(hex('#6b4510'), hex('#ffe9a6'), clamp(lumOf(c) * 1.9));
+    return c;
+  }
+  function drawToad(g, ox, oy, s) {
+    const lift = s.lift || 0;
+    for (const L of TOAD) {
+      g.fillStyle = rgb(tone(L.c, s.mode));
+      const dy = L.b ? -lift : 0;
+      for (const [x, y, w, h] of L.r) g.fillRect(ox + x, oy + y + dy, w, h);
+    }
+    if (s.sac > 0) {
+      g.fillStyle = rgb(tone(hex('#b9cb8e'), s.mode));
+      fillEllipse(g, ox + 40, oy + 31 - lift, 2 + 7 * s.sac, 0.6 + 3.2 * s.sac);
+      g.fillStyle = rgb(tone(hex('#dfe8b8'), s.mode));
+      g.fillRect(ox + 37, oy + 30 - lift - Math.round(2 * s.sac), 2, 1);
+    }
+    if (s.eyes) for (const [c, rs] of EYES) { g.fillStyle = rgb(tone(c, s.mode)); for (const [x, y, w, h] of rs) g.fillRect(ox + x, oy + y - lift, w, h); }
+    if (s.spark > 0.02) {
+      g.fillStyle = `rgba(255,241,168,${s.spark})`; g.fillRect(ox + 39, oy + 12 - lift, 2, 2);
+      if (s.spark > 0.6) { g.fillStyle = `rgba(243,223,138,${s.spark * 0.6})`; g.fillRect(ox + 39, oy + 10 - lift, 2, 1); g.fillRect(ox + 37, oy + 12 - lift, 1, 2); g.fillRect(ox + 42, oy + 12 - lift, 1, 2); }
+    }
+  }
+
+  /* ---------------- shared state ---------------- */
+  let T = 0, scrollT = 0, lastActive = performance.now(), sleeping = false, gold = false;
+  const visible = new Map();
+  const io = new IntersectionObserver((es) => es.forEach((e) => visible.set(e.target, e.isIntersecting)), { rootMargin: '80px' });
+
+  /* ================= SKY: a whole night passes as you read ================= */
+  const sky = $('#sky'), sg = ctx(sky);
+  let SW = 200, SH = 120, stars = [], skyCache = null, skyCacheT = -1, moonPhase = 1, moonSprite = null;
+  let shoot = null, nextShoot = rnd(6, 14);
+  const SKYK = [
+    { t: 0.00, z: '#04061a', m: '#0b0f2e', h: '#1a1e4a', b: '#0b1122', f: '#060a16' },
+    { t: 0.45, z: '#070a24', m: '#141a46', h: '#2c2a5e', b: '#10162c', f: '#080c1c' },
+    { t: 0.78, z: '#131a46', m: '#3a3172', h: '#a35a6c', b: '#22193a', f: '#120d24' },
+    { t: 1.00, z: '#2b4386', m: '#8f6ca2', h: '#f4b27a', b: '#4a2f50', f: '#2a1c3a' },
+  ].map((k) => ({ t: k.t, z: hex(k.z), m: hex(k.m), h: hex(k.h), b: hex(k.b), f: hex(k.f) }));
+  function skyKey(t) {
+    let i = 0; while (i < SKYK.length - 2 && t > SKYK[i + 1].t) i++;
+    const a = SKYK[i], b = SKYK[i + 1], u = clamp((t - a.t) / (b.t - a.t));
+    return { z: mix(a.z, b.z, u), m: mix(a.m, b.m, u), h: mix(a.h, b.h, u), b: mix(a.b, b.b, u), f: mix(a.f, b.f, u) };
+  }
+  function sizeSky() {
+    SW = innerWidth < 600 ? 120 : 200;
+    SH = Math.max(80, Math.round((SW * innerHeight) / innerWidth));
+    sky.width = SW; sky.height = SH; sg.imageSmoothingEnabled = false;
+    const R = mulberry(11);
+    stars = Array.from({ length: Math.round((SW * SH) / 160) }, () => ({ x: Math.floor(R() * SW), y: Math.floor(R() * SH * 0.8), b: 0.35 + R() * 0.65, ph: R() * 6.3, sp: 0.6 + R() * 2.2, big: R() < 0.06 }));
+    skyCacheT = -1;
+  }
+  function buildSkyCache(K) {
+    const c = skyCache || document.createElement('canvas');
+    c.width = SW; c.height = SH;
+    const g = c.getContext('2d'), img = g.createImageData(SW, SH), d = img.data, N = 9;
+    const bands = Array.from({ length: N }, (_, i) => { const f = i / (N - 1); return f < 0.55 ? mix(K.z, K.m, f / 0.55) : mix(K.m, K.h, (f - 0.55) / 0.45); });
+    for (let y = 0; y < SH; y++) {
+      const p = (y / (SH - 1)) * (N - 1), lo = Math.floor(p), fr = p - lo;
+      for (let x = 0; x < SW; x++) {
+        const c2 = BAYER[(y & 3) * 4 + (x & 3)] < fr ? bands[Math.min(N - 1, lo + 1)] : bands[lo];
+        const o = (y * SW + x) * 4; d[o] = c2[0]; d[o + 1] = c2[1]; d[o + 2] = c2[2]; d[o + 3] = 255;
+      }
+    }
+    g.putImageData(img, 0, 0);
+    skyCache = c;
+  }
+  function buildMoon() {
+    const r = 6, S = 2 * r + 14, c = document.createElement('canvas'); c.width = c.height = S;
+    const g = c.getContext('2d'), cx = S / 2, k = moonPhase;
+    const s = k <= 4 ? (2 * r * k) / 4 : (2 * r * (8 - k)) / 4, dir = k <= 4 ? -1 : 1;
+    for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
+      const dx = x + 0.5 - cx, dy = y + 0.5 - cx, d = Math.hypot(dx, dy);
+      if (d < r) {
+        const lit = k === 4 || (k !== 0 && Math.hypot(dx - dir * s, dy) >= r);
+        g.fillStyle = lit ? (hash(x, y) < 0.12 ? '#d9d0b4' : '#f3ecd2') : 'rgba(40,46,86,.6)';
+        g.fillRect(x, y, 1, 1);
+      } else if (d < r + 6 && k !== 0 && BAYER[(y & 3) * 4 + (x & 3)] < 0.22 * (1 - (d - r) / 6) * (k === 4 ? 1.6 : 1)) {
+        g.fillStyle = 'rgba(243,236,210,.35)'; g.fillRect(x, y, 1, 1);
+      }
+    }
+    moonSprite = c;
+  }
+  function sleepHill(x) {               // a hill shaped like a toad asleep, for those who look
+    const c = SW * 0.09, w = 15, u = (x - c) / w;
+    let h = Math.abs(u) < 1 ? 7 * Math.sqrt(1 - u * u) : 0;
+    if (Math.abs(x - (c - 9)) < 2.2 || Math.abs(x - (c - 4)) < 2.2) h += 2;
+    return h;
+  }
+  const hillBack = (x) => SH - 20 + Math.sin(x * 0.05) * 3 + Math.sin(x * 0.13 + 1) * 1.6 - sleepHill(x);
+  const hillFront = (x) => SH - 10 + Math.sin(x * 0.035 + 2) * 3 + Math.sin(x * 0.11) * 1.2;
+  const moonPos = () => [SW * 0.8, SH * (0.13 + scrollT * 0.62)];
+  function drawSky(A, dt) {
+    const K = skyKey(scrollT);
+    if (Math.abs(scrollT - skyCacheT) > 0.003 || !skyCache) { buildSkyCache(K); skyCacheT = scrollT; }
+    sg.drawImage(skyCache, 0, 0);
+    const starVis = clamp(1 - (scrollT - 0.5) / 0.38);
+    for (const s of stars) {
+      const a = starVis * s.b * (0.55 + 0.45 * Math.sin(A * s.sp + s.ph)) * (gold ? 1.3 : 1);
+      if (a < 0.04) continue;
+      sg.fillStyle = `rgba(255,248,226,${Math.min(1, a)})`;
+      sg.fillRect(s.x, s.y, 1, 1);
+      if (s.big && a > 0.5) { sg.fillStyle = `rgba(255,248,226,${a * 0.35})`; sg.fillRect(s.x - 1, s.y, 3, 1); sg.fillRect(s.x, s.y - 1, 1, 3); }
+    }
+    if (!RM && starVis > 0.3) {
+      nextShoot -= dt;
+      if (nextShoot <= 0 && !shoot) { shoot = { x: rnd(SW * 0.1, SW * 0.7), y: rnd(2, SH * 0.3), vx: rnd(55, 85), vy: rnd(18, 30), life: 0 }; nextShoot = rnd(9, 22); }
+    }
+    if (shoot) {
+      shoot.life += dt; shoot.x += shoot.vx * dt; shoot.y += shoot.vy * dt;
+      const fade = 1 - shoot.life / 0.9;
+      for (let i = 0; i < 9; i++) { sg.fillStyle = `rgba(255,246,214,${Math.max(0, fade * (1 - i / 9))})`; sg.fillRect(Math.round(shoot.x - shoot.vx * 0.012 * i), Math.round(shoot.y - shoot.vy * 0.012 * i), 1, 1); }
+      if (shoot.life > 0.9) shoot = null;
+    }
+    if (scrollT > 0.66) {           // the sun comes up as you reach the end
+      const u = (scrollT - 0.66) / 0.34, sx = Math.round(SW * 0.3), sy = Math.round(SH + 10 - u * SH * 0.3), r = 8;
+      for (let y = -r - 10; y <= r + 10; y++) for (let x = -r - 10; x <= r + 10; x++) {
+        const d = Math.hypot(x, y);
+        if (d <= r) { sg.fillStyle = d < r - 2.5 ? '#fff3c8' : '#ffd987'; sg.fillRect(sx + x, sy + y, 1, 1); }
+        else if (d < r + 10 && BAYER[(((sy + y) & 3) * 4) + ((sx + x) & 3)] < 0.5 * (1 - (d - r) / 10)) { sg.fillStyle = 'rgba(255,214,150,.45)'; sg.fillRect(sx + x, sy + y, 1, 1); }
+      }
+    }
+    if (!moonSprite) buildMoon();
+    const [mx, my] = moonPos();
+    sg.globalAlpha = clamp(1.25 - scrollT * 0.8);
+    sg.drawImage(moonSprite, Math.round(mx - moonSprite.width / 2), Math.round(my - moonSprite.height / 2));
+    sg.globalAlpha = 1;
+    sg.fillStyle = rgb(K.b);
+    for (let x = 0; x < SW; x++) { const y = Math.round(hillBack(x)); sg.fillRect(x, y, 1, SH - y); }
+    for (const px of [0.16, 0.2, 0.86]) { const x = Math.round(SW * px), y = Math.round(hillBack(x)); sg.fillRect(x, y - 8, 2, 8); sg.fillRect(x - 1, y - 6, 4, 5); }
+    sg.fillStyle = rgb(K.f);
+    for (let x = 0; x < SW; x++) { const y = Math.round(hillFront(x)); sg.fillRect(x, y, 1, SH - y); }
+    const ffVis = clamp(1 - (scrollT - 0.55) / 0.3);
+    if (ffVis > 0.05) for (let i = 0; i < 12; i++) {
+      const x = ((((i * 37.7 + Math.sin(A * 0.3 + i) * 9 + A * (i % 2 ? 1.5 : -1.2)) % SW) + SW) % SW);
+      const y = SH - 16 - (i % 5) * 3 + Math.sin(A * 0.7 + i * 2) * 3, a = ffVis * Math.max(0, Math.sin(A * 1.3 + i * 1.7));
+      if (a > 0.1) { sg.fillStyle = `rgba(232,240,140,${a})`; sg.fillRect(Math.round(x), Math.round(y), 1, 1); }
+    }
+  }
+
+  /* ================= HERO POND: the toad on his lily pad ================= */
+  const pond = $('#pond'), pg = ctx(pond), PW = 160, PH = 100, OX = 40, OY = 22, WATER = 58;
+  const says = $('#says');
+  let pondBg = null, pokes = 0, eyesUntil = 0, stoneUntil = 0, sacAt = -9, spark = 0, nextRipple = 2.4, lastPondRipple = 0;
+  const ripples = [{ r: 46, born: 0 }];
+  const POKES = ['Mm?', 'I was almost somewhere.', 'You found me. I was not lost.', 'Yes, a toad. No, not a prince.', 'Gently. The pond felt that.', 'Each tap is a small bell. I am listening.'];
+  function buildPondBg() {
+    const c = document.createElement('canvas'); c.width = PW; c.height = PH;
+    const g = c.getContext('2d'), R = mulberry(5);
+    g.fillStyle = '#0a1222';
+    for (let x = 0; x < PW; x++) { const h = 3 + Math.sin(x * 0.09) * 2 + Math.sin(x * 0.23 + 1) * 1.4 + R() * 1.1; g.fillRect(x, Math.round(WATER - h), 1, Math.ceil(h) + 1); }
+    g.fillStyle = '#0d1a2c';
+    for (let i = 0; i < 26; i++) { const x = Math.floor(R() * PW), h = 3 + Math.floor(R() * 6); g.fillRect(x, WATER - 3 - h, 1, h); }
+    const A = hex('#101d3c'), B = hex('#172a52'), C2 = hex('#1d3462');
+    for (let y = WATER; y < PH; y++) {
+      const f = ((y - WATER) / (PH - WATER)) * 2, lo = f < 1 ? A : B, hi = f < 1 ? B : C2, fr = f % 1;
+      for (let x = 0; x < PW; x++) { g.fillStyle = rgb(BAYER[(y & 3) * 4 + (x & 3)] < fr ? hi : lo); g.fillRect(x, y, 1, 1); }
+    }
+    g.fillStyle = '#2a4475'; g.fillRect(0, WATER, PW, 1);
+    for (const [x, y, rx, ry] of [[18, 70, 9, 2.5], [134, 66, 8, 2], [146, 90, 12, 3.4], [10, 94, 10, 3], [112, 97, 7, 2]]) {
+      g.fillStyle = '#2f5a35'; fillEllipse(g, x, y + 1, rx, ry);
+      g.fillStyle = '#3f7444'; fillEllipse(g, x, y, rx - 1, Math.max(1, ry - 0.6));
+    }
+    g.fillStyle = '#f2b8cc'; g.fillRect(133, 62, 3, 3); g.fillStyle = '#d9779f'; g.fillRect(132, 63, 1, 2); g.fillRect(136, 63, 1, 2); g.fillStyle = '#fde7ee'; g.fillRect(134, 61, 1, 2);
+    // dissolve the pond's edges into the night, pixel by pixel
+    const img = g.getImageData(0, 0, PW, PH), d = img.data;
+    for (let y = 0; y < PH; y++) for (let x = 0; x < PW; x++) {
+      const e = Math.min(x / 22, (PW - 1 - x) / 22, (PH - 1 - y) / 10, 1);
+      if (e < 1 && BAYER[(y & 3) * 4 + (x & 3)] > e) d[(y * PW + x) * 4 + 3] = 0;
+    }
+    g.putImageData(img, 0, 0);
+    pondBg = c;
+  }
+  /* The toad answers the way he does in the meadow: the third eye sparks, thought orbs rise from his
+     temple, a small thought cloud blooms and condenses into a golden pearl, the pearl streams back down,
+     his eyes open with a breath, and only then does the speech bubble bloom. */
+  let think = null, bubbleTimer = 0, bubbleOn = false;
+  const TK = { orbs: 0.12, cloud: 0.36, full: 0.62, cond: 0.9, travel: 1.02, wake: 1.12, speak: 1.2, end: 1.5 };
+  const ORBS = [[103, 29, 1], [109, 23, 1.5], [116, 16, 2]], CLOUD = [131, 10];
+  const PUFFS = [[-8, 2, 5], [0, -1, 6.5], [8, 2, 5], [0, 3, 5], [-4, 0, 5], [4, 0, 5]];
+  const STEPS = [0.18, 0.42, 0.7, 0.9, 1.035, 1];
+  const RUNES = [[1, 0, 1, 0, 1, 0, 1, 0, 1], [0, 1, 0, 1, 1, 1, 0, 1, 0], [1, 1, 1, 0, 1, 0, 0, 1, 0], [1, 0, 0, 1, 1, 1, 0, 0, 1], [0, 1, 1, 0, 1, 0, 1, 1, 0], [1, 1, 0, 0, 1, 0, 0, 1, 1]];
+  function bloom(text, hold) {
+    clearTimeout(bubbleTimer);
+    says.replaceChildren(Object.assign(document.createElement('span'), { className: 't', textContent: text }));
+    says.classList.remove('out', 'bloom'); void says.offsetWidth; says.classList.add('bloom');
+    bubbleOn = true;
+    blip(660, 990, 0.12, 'sine', 0.02);
+    const ms = hold ?? 2200 + text.length * 45;
+    eyesUntil = Math.max(eyesUntil, T + ms / 1000);
+    bubbleTimer = setTimeout(dismiss, ms);
+  }
+  function dismiss() {
+    clearTimeout(bubbleTimer);
+    if (!bubbleOn) return;
+    bubbleOn = false;
+    says.classList.remove('bloom'); void says.offsetWidth; says.classList.add('out');
+  }
+  function say(text, hold) { think = null; bloom(text, hold); }
+  function ponder(text, after, hold) {
+    dismiss();
+    if (RM) { bloom(text, hold); if (after) after(); return; }
+    think = { t0: T, text, after, hold, spoke: false };
+    blip(880, 1320, 0.1, 'sine', 0.015);
+  }
+  const ring = (g, x, y, r, fill, edge) => { g.fillStyle = edge; fillEllipse(g, x, y, r + 1, r + 1); g.fillStyle = fill; fillEllipse(g, x, y, r, r); };
+  function drawThought() {
+    if (!think) return;
+    const e = T - think.t0, lift = Math.sin(T * 1.5) > 0.2 ? 1 : 0;
+    spark = Math.max(spark, e < TK.orbs ? e / TK.orbs : e < TK.speak ? 1 : 0);
+    // the pearl's path back down: cloud -> orb 3 -> orb 2 -> orb 1 -> temple
+    const path = [CLOUD, ORBS[2], ORBS[1], ORBS[0], [98, 34]];
+    const tu = clamp((e - TK.travel) / (TK.wake - TK.travel)) * (path.length - 1), seg = Math.min(path.length - 2, Math.floor(tu));
+    for (let i = 0; i < 3; i++) {
+      const born = TK.orbs + i * 0.08, passedAt = TK.travel + ((2 - i + 1) / 4) * (TK.wake - TK.travel);
+      if (e < born || e > passedAt + 0.03) continue;
+      const [x, y, r] = ORBS[i], grow = e - born < 0.05 ? 0 : r;
+      const lit = e > TK.travel && Math.abs(e - passedAt) < 0.04;
+      ring(pg, x, y - lift, grow, lit ? '#f3df8a' : '#141e42', lit ? '#fff6c8' : e - born < 0.12 ? '#a0d8ef' : '#829fd8');
+    }
+    if (e >= TK.cloud && e < TK.travel) {
+      let sc, edge;
+      if (e < TK.full) { sc = STEPS[Math.min(5, Math.floor(((e - TK.cloud) / (TK.full - TK.cloud)) * 6))]; edge = '#a0d8ef'; }
+      else if (e < TK.cond) { sc = 1; edge = '#5c74b2'; }
+      else { sc = 1 - 0.8 * Math.floor(((e - TK.cond) / (TK.travel - TK.cond)) * 4) / 4; edge = '#e6c468'; }
+      pg.fillStyle = edge; for (const [dx, dy, r] of PUFFS) fillEllipse(pg, CLOUD[0] + dx * sc, CLOUD[1] + dy * sc, r * sc + 1, r * sc * 0.8 + 1);
+      pg.fillStyle = '#141e42'; for (const [dx, dy, r] of PUFFS) fillEllipse(pg, CLOUD[0] + dx * sc, CLOUD[1] + dy * sc, r * sc, r * sc * 0.8);
+      if (e >= TK.full && e < TK.cond) {          // contemplation runes, cycling at 6 fps
+        pg.fillStyle = '#a0d8ef';
+        for (let k = 0; k < 3; k++) {
+          const rn = RUNES[(Math.floor(T * 6) + k * 2) % RUNES.length];
+          for (let q = 0; q < 9; q++) if (rn[q]) pg.fillRect(CLOUD[0] - 6 + k * 5 + (q % 3), CLOUD[1] - 1 + Math.floor(q / 3), 1, 1);
+        }
+      }
+      if (e >= TK.cond) { pg.fillStyle = '#fff6c8'; pg.fillRect(CLOUD[0] - 1, CLOUD[1] - 1, 3, 3); pg.fillStyle = '#e6c468'; pg.fillRect(CLOUD[0] - 2, CLOUD[1], 1, 1); pg.fillRect(CLOUD[0] + 2, CLOUD[1], 1, 1); pg.fillRect(CLOUD[0], CLOUD[1] - 2, 1, 1); pg.fillRect(CLOUD[0], CLOUD[1] + 2, 1, 1); }
+    }
+    if (e >= TK.travel && e < TK.wake) {            // the wisdom pearl streams down
+      const a = path[seg], b = path[seg + 1], f = tu - seg;
+      const x = Math.round(a[0] + (b[0] - a[0]) * f), y = Math.round(a[1] + (b[1] - a[1]) * f) - lift;
+      pg.fillStyle = '#e6c468'; pg.fillRect(x - 1, y, 3, 1); pg.fillRect(x, y - 1, 1, 3);
+      pg.fillStyle = '#fff6c8'; pg.fillRect(x, y, 1, 1);
+    }
+    if (e >= TK.wake && e < TK.end) {               // eyes open, a breath of inspiration
+      if (!think.woke) { think.woke = true; eyesUntil = T + 1; spark = 1; }
+      const u = (e - TK.wake) / (TK.end - TK.wake);
+      pg.fillStyle = `rgba(223,232,255,${0.8 * (1 - u)})`;
+      for (let k = 0; k < 3; k++) pg.fillRect(Math.round(OX + 38 - k * 2 - u * 6), Math.round(OY + 28 - lift - u * 5 - k), 1, 1);
+    }
+    if (e >= TK.speak && !think.spoke) { think.spoke = true; bloom(think.text, think.hold); if (think.after) think.after(); }
+    if (e >= TK.end) think = null;
+  }
+  function pokeToad() {
+    activity();
+    if (think) return;                                  // he is already thinking
+    ripples.push({ r: 44, born: T });
+    if (T < stoneUntil) { say('…', 1400); return; }
+    pokes++;
+    blip(520, 380, 0.08, 'square', 0.025);
+    if (pokes >= 7) {
+      pokes = 0;
+      ponder('Seven taps. I shall become a stone.', () => { stoneUntil = T + 7.5; eyesUntil = 0; }, 3200);
+      return;
+    }
+    ponder(POKES[(pokes - 1) % POKES.length]);
+  }
+  function croak() {
+    sacAt = T; eyesUntil = T + 1.8;
+    say('ribbit.', 2000);
+    blip(150, 90, 0.16, 'square', 0.06); blip(140, 80, 0.2, 'square', 0.06, 0.24);
+  }
+  function drawPond(A, dt) {
+    if (!pondBg) buildPondBg();
+    pg.clearRect(0, 0, PW, PH);
+    pg.drawImage(pondBg, 0, 0);
+    for (let i = 0; i < 9; i++) {      // moonlight on the water
+      const y = WATER + 2 + i * 3 + (i > 4 ? 2 : 0), w = 1 + ((i * 7 + Math.floor(A * 2)) % 4);
+      pg.fillStyle = `rgba(190,205,240,${0.5 - i * 0.04})`; pg.fillRect(122 - (w >> 1) + Math.round(Math.sin(A * 1.3 + i) * 1.5), y, w, 1);
+    }
+    pg.fillStyle = 'rgba(70,100,160,.8)';
+    for (let i = 0; i < 12; i++) { const x = ((i * 29 + A * (2 + (i % 3))) % (PW + 8)) - 4, y = WATER + 4 + ((i * 11) % 36); pg.fillRect(Math.round(x), y, 2 + (i % 3), 1); }
+    if (!RM) { nextRipple -= dt; if (nextRipple <= 0) { ripples.push({ r: 44, born: T }); nextRipple = 3.4; } }
+    for (let i = ripples.length - 1; i >= 0; i--) {
+      const rp = ripples[i], age = T - rp.born, r = rp.r + age * 9, life = 1 - age / 3.2;
+      if (life <= 0) { ripples.splice(i, 1); continue; }
+      pg.fillStyle = `rgba(150,180,230,${life * 0.55})`;
+      const n = Math.round(r * 2.4), cx = rp.x ?? 80, cy = rp.y ?? 87;
+      for (let k = 0; k < n; k++) {
+        if (life < 0.5 && k % 2) continue;
+        const a = (k / n) * Math.PI * 2, y = Math.round(cy + Math.sin(a) * r * 0.22);
+        if (y > WATER) pg.fillRect(Math.round(cx + Math.cos(a) * r), y, 1, 1);
+      }
+    }
+    for (let i = 0; i < 7; i++) {      // cattails
+      const left = i < 4, bx = left ? 4 + i * 5 : 140 + (i - 4) * 6, top = 54 + ((i * 7) % 12);
+      const sway = Math.sin(A * 0.9 + i * 1.3) * 1.6;
+      pg.fillStyle = '#1e3a28';
+      for (let y = PH; y > top; y--) pg.fillRect(Math.round(bx + sway * ((PH - y) / (PH - top)) ** 2), y, 1, 1);
+      const hx = Math.round(bx + sway);
+      pg.fillStyle = '#5a3a22'; pg.fillRect(hx - 1, top - 1, 3, 6);
+      pg.fillStyle = '#7a5232'; pg.fillRect(hx, top - 1, 1, 5);
+      pg.fillStyle = '#2b5236'; pg.fillRect(hx, top - 4, 1, 3);
+    }
+    pg.fillStyle = '#244a2c'; fillEllipse(pg, 80, 88, 44, 10);   // the great lily pad
+    pg.fillStyle = '#3c6e3c'; fillEllipse(pg, 80, 87, 42, 9);
+    pg.fillStyle = '#4c8446'; fillEllipse(pg, 80, 86, 36, 7);
+    pg.fillStyle = '#3c6e3c'; for (let k = 0; k < 7; k++) { const a = Math.PI * (0.08 + k * 0.14); pg.fillRect(Math.round(80 + Math.cos(a) * 30), Math.round(87 + Math.sin(a) * 6), 2, 1); }
+    pg.fillStyle = '#172a52'; pg.fillRect(118, 86, 7, 1); pg.fillRect(120, 87, 5, 1); pg.fillRect(121, 85, 3, 1);
+    const stone = T < stoneUntil;
+    const lift = Math.sin(A * (sleeping ? 1.0 : 1.5)) > 0.2 ? 1 : 0;
+    const sacU = (T - sacAt) / 0.5, sac = sacU > 0 && sacU < 2 ? Math.sin((sacU % 1) * Math.PI) : 0;
+    spark = Math.max(gold ? 0.8 : 0, spark - dt * 0.6);
+    if (gold) {                        // a halo, briefly
+      for (let k = 0; k < 40; k++) {
+        const a = (k / 40) * Math.PI * 2 + A * 0.4, r = 27 + (k % 2);
+        pg.fillStyle = k % 3 ? 'rgba(255,226,140,.8)' : 'rgba(255,248,210,.95)';
+        pg.fillRect(Math.round(OX + 40 + Math.cos(a) * r), Math.round(OY + 34 + Math.sin(a) * r), 1, 1);
+      }
+      pg.fillStyle = 'rgba(255,230,150,.45)';
+      for (let k = 0; k < 8; k++) { const a = (k / 8) * Math.PI * 2 + A * 0.2; for (let d = 31; d < 36; d += 2) pg.fillRect(Math.round(OX + 40 + Math.cos(a) * d), Math.round(OY + 34 + Math.sin(a) * d), 1, 1); }
+    }
+    drawToad(pg, OX, OY, { lift, eyes: !stone && !sleeping && T < eyesUntil, mode: stone ? 'stone' : gold ? 'gold' : 'normal', sac, spark: stone ? 0 : spark });
+    drawThought();
+    if (sleeping && !stone) {          // small z's
+      for (let k = 0; k < 3; k++) {
+        const u = (A * 0.35 + k / 3) % 1, x = Math.round(OX + 60 + u * 10 + Math.sin(u * 6) * 2), y = Math.round(OY + 14 - u * 18);
+        pg.fillStyle = `rgba(220,228,255,${1 - u})`;
+        pg.fillRect(x, y, 3, 1); pg.fillRect(x + 1, y + 1, 1, 1); pg.fillRect(x, y + 2, 3, 1);
+      }
+    }
+    for (let i = 0; i < 6; i++) {      // fireflies around him
+      const x = 80 + Math.sin(A * 0.35 + i * 2.1) * (34 + i * 6), y = 40 + Math.sin(A * 0.5 + i * 1.7) * 10 + i * 2;
+      const a = Math.max(0, Math.sin(A * 1.6 + i * 2.4));
+      if (a > 0.15) { pg.fillStyle = gold ? `rgba(255,220,140,${a})` : `rgba(226,240,140,${a})`; pg.fillRect(Math.round(x), Math.round(y), 1, 1); }
+    }
+  }
+  pond.addEventListener('click', (e) => {
+    const r = pond.getBoundingClientRect(), x = ((e.clientX - r.left) / r.width) * PW, y = ((e.clientY - r.top) / r.height) * PH;
+    if (x > OX + 12 && x < OX + 68 && y > OY + 6 && y < OY + 66) pokeToad();
+    else if (y > WATER && T - lastPondRipple > 0.25) { lastPondRipple = T; ripples.push({ r: 1, born: T, x, y }); blip(900, 500, 0.06, 'sine', 0.03); }
+  });
+  pond.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pokeToad(); } });
+
+  /* ================= INK FROG, after Sengai, painted as you arrive ================= */
+  const ink = $('#ink'), ig = ctx(ink), IW = 120, IH = 84;
+  let inkStamps = null, inkProg = 0, inkDrawn = -1, inkPaper = null;
+  function buildInk() {
+    const R = mulberry(31), S = [];
+    const stroke = (n, fn, rf, dry) => { for (let i = 0; i <= n; i++) { const u = i / n, [x, y] = fn(u); S.push({ x, y, r: rf(u), dry, k: R() }); } };
+    // one long sweep: haunch, back, crown, chin
+    stroke(90, (u) => { const a = Math.PI * (0.93 + u * 1.17); return [60 + Math.cos(a) * 34, 50 + Math.sin(a) * 23]; }, (u) => 0.9 + 2.1 * Math.sin(Math.PI * Math.min(1, u * 1.15)), 0.18);
+    stroke(46, (u) => [26 + u * 70, 68 + Math.sin(u * 3.1) * 1.5], (u) => 0.7 + 0.8 * Math.sin(Math.PI * u), 0.42);
+    for (const [cx, cy] of [[45, 22], [75, 22]]) stroke(30, (u) => [cx + Math.cos(u * 6.5 + 2.6) * 6.4, cy + Math.sin(u * 6.5 + 2.6) * 5.2], (u) => 0.7 + 0.5 * Math.sin(Math.PI * u), 0.12);
+    for (const [cx, cy] of [[45, 23], [75, 23]]) stroke(3, (u) => [cx - 1 + u * 2, cy], () => 1.7, 0);
+    // a wide, contented mouth
+    stroke(34, (u) => [37 + u * 46, 40 + Math.sin(u * Math.PI) * 3.2], (u) => 0.6 + 0.8 * Math.sin(Math.PI * u), 0.18);
+    // front legs, splayed, with toes
+    stroke(14, (u) => [47 - u * 7, 49 + u * 16], (u) => 1.4 - u * 0.6, 0.15);
+    stroke(14, (u) => [73 + u * 7, 49 + u * 16], (u) => 1.4 - u * 0.6, 0.15);
+    for (const [x, d] of [[39, -1], [81, 1]]) for (let k = 0; k < 3; k++) stroke(4, (u) => [x + d * k * 2 + d * u * 2, 65 + u], () => 0.6, 0.1);
+    for (const [x, y, dx] of [[16, 72, -2], [20, 72, 1], [100, 72, 2], [104, 71, -1], [108, 72, 3]]) stroke(10, (u) => [x + dx * u, y - u * 9], (u) => 0.9 - u * 0.6, 0.25);
+    inkStamps = S;
+    const p = document.createElement('canvas'); p.width = IW; p.height = IH;
+    const g = p.getContext('2d');
+    g.fillStyle = '#e9dfc3'; g.fillRect(0, 0, IW, IH);
+    for (let i = 0; i < 380; i++) { g.fillStyle = R() < 0.5 ? 'rgba(170,150,110,.25)' : 'rgba(255,250,235,.5)'; g.fillRect(Math.floor(R() * IW), Math.floor(R() * IH), R() < 0.3 ? 2 : 1, 1); }
+    inkPaper = p;
+  }
+  const SEAL = ['XXXXXXXXX', 'X..XXX..X', 'X.......X', 'X.X...X.X', 'X.......X', 'XX.....XX', 'X.......X', '..X...X..', 'X..XXX..X', 'XXXXXXXXX'];
+  function inkTarget() {                // 0 as the painting enters the screen, 1 once it reaches the upper third
+    if (RM) return 1;
+    const r = ink.getBoundingClientRect(), from = innerHeight * 0.92, to = innerHeight * 0.3;
+    return clamp((from - r.top) / (from - to));
+  }
+  function drawInk(dt) {
+    if (!inkStamps) buildInk();
+    const target = inkTarget();
+    inkProg += (target - inkProg) * Math.min(1, dt * 7);
+    if (Math.abs(target - inkProg) < 0.002) inkProg = target;
+    if (Math.abs(inkProg - inkDrawn) < 0.001) return;
+    inkDrawn = inkProg;
+    ig.drawImage(inkPaper, 0, 0);
+    const wash = clamp(inkProg * 4);
+    for (let y = 30; y < 68; y++) for (let x = 27; x < 94; x++) {
+      const dx = (x - 60) / 32, dy = (y - 50) / 21;
+      if (dx * dx + dy * dy < 1 && hash(x, y) < 0.42 * wash) { ig.fillStyle = hash(y, x) < 0.5 ? 'rgba(120,112,96,.32)' : 'rgba(150,142,124,.28)'; ig.fillRect(x, y, 1, 1); }
+    }
+    const n = Math.floor(inkStamps.length * clamp((inkProg - 0.05) / 0.85));
+    for (let i = 0; i < n; i++) {
+      const s = inkStamps[i], R = Math.ceil(s.r);
+      for (let y = -R; y <= R; y++) for (let x = -R; x <= R; x++) {
+        const d = Math.hypot(x, y); if (d > s.r) continue;
+        const X = Math.round(s.x + x), Y = Math.round(s.y + y);
+        if (hash(X * 1.7, Y * 2.3 + s.k) < s.dry * (d / (s.r + 0.01))) continue;
+        ig.fillStyle = d > s.r - 0.8 ? '#4a453c' : '#1d1b18';
+        ig.fillRect(X, Y, 1, 1);
+      }
+    }
+    if (inkProg > 0.93) {              // the red seal, pressed last
+      SEAL.forEach((row, y) => [...row].forEach((ch, x) => { ig.fillStyle = ch === 'X' ? '#b23a2e' : '#f1e6c8'; ig.fillRect(101 + x, 62 + y, 1, 1); }));
+    }
+  }
+
+  /* ================= FX: firefly trail, the fly, golden petals ================= */
+  const fx = $('#fx'), fg = ctx(fx), FP = 3, sparks = [], petals = [];
+  let FW = 0, FH = 0, fly = null, nextFly = rnd(22, 40), lastSpark = 0;
+  function sizeFx() { FW = Math.ceil(innerWidth / FP); FH = Math.ceil(innerHeight / FP); fx.width = FW; fx.height = FH; fg.imageSmoothingEnabled = false; }
+  addEventListener('pointermove', (e) => {
+    activity();
+    if (RM || e.pointerType !== 'mouse' || T - lastSpark < 0.05) return;
+    lastSpark = T;
+    sparks.push({ x: e.clientX / FP + rnd(-1, 1), y: e.clientY / FP + rnd(-1, 1), born: T, vy: rnd(-4, -1) });
+  }, { passive: true });
+  function drawFx(A, dt) {
+    fg.clearRect(0, 0, FW, FH);
+    for (let i = sparks.length - 1; i >= 0; i--) {
+      const s = sparks[i], age = T - s.born; if (age > 0.9) { sparks.splice(i, 1); continue; }
+      fg.fillStyle = gold ? `rgba(255,224,140,${1 - age / 0.9})` : `rgba(230,240,150,${(1 - age / 0.9) * (0.6 + 0.4 * Math.sin(age * 30))})`;
+      fg.fillRect(Math.round(s.x), Math.round(s.y + s.vy * age), 1, 1);
+    }
+    for (let i = petals.length - 1; i >= 0; i--) {
+      const p = petals[i]; p.y += p.vy * dt; p.x += Math.sin(T * p.w + p.ph) * dt * 8;
+      if (p.y > FH + 2) { petals.splice(i, 1); continue; }
+      fg.fillStyle = p.c; fg.fillRect(Math.round(p.x), Math.round(p.y), 2, 1); fg.fillRect(Math.round(p.x) + (Math.sin(T * 4 + p.ph) > 0 ? 1 : 0), Math.round(p.y) + 1, 1, 1);
+    }
+    if (!RM && !fly) { nextFly -= dt; if (nextFly <= 0) { const fromLeft = Math.random() < 0.5; fly = { x: fromLeft ? -4 : FW + 4, y: rnd(FH * 0.2, FH * 0.7), dir: fromLeft ? 1 : -1, t: 0 }; } }
+    if (fly) {
+      fly.t += dt;
+      fly.x += fly.dir * (14 + Math.sin(fly.t * 3) * 10) * dt + Math.sin(fly.t * 17) * 0.4;
+      fly.y += Math.sin(fly.t * 5.3) * 0.5 + Math.cos(fly.t * 11) * 0.3;
+      const x = Math.round(fly.x), y = Math.round(fly.y);
+      fg.fillStyle = '#15161a'; fg.fillRect(x, y, 2, 1);
+      fg.fillStyle = Math.floor(T * 30) % 2 ? 'rgba(220,235,255,.85)' : 'rgba(220,235,255,.35)'; fg.fillRect(x, y - 1, 2, 1);
+      if (fly.x < -8 || fly.x > FW + 8) { fly = null; nextFly = rnd(45, 90); }
+    }
+  }
+  function catchFly() {
+    for (let k = 0; k < 6; k++) sparks.push({ x: fly.x + rnd(-2, 2), y: fly.y + rnd(-2, 2), born: T, vy: rnd(-6, -2) });
+    fly = null; nextFly = rnd(50, 100);
+    blip(1200, 1800, 0.05, 'square', 0.02);
+    if (visible.get(pond)) say('Thank you.');
+  }
+
+  /* ================= taps on the open sky ================= */
+  addEventListener('pointerdown', (e) => {
+    activity();
+    if (fly && Math.hypot(e.clientX / FP - fly.x, e.clientY / FP - fly.y) < 8) { catchFly(); return; }
+    if (e.target.closest('a,button,canvas#pond,.story,.lead,h1,.says,.end')) return;
+    const sx = (e.clientX / innerWidth) * SW, sy = (e.clientY / innerHeight) * SH;
+    const [mx, my] = moonPos();
+    if (Math.hypot(sx - mx, sy - my) < 11) {
+      moonPhase = (moonPhase + 1) % 8; buildMoon();
+      blip(1000 + moonPhase * 80, 900, 0.1, 'sine', 0.03);
+      return;
+    }
+    if (shoot && Math.hypot(sx - shoot.x, sy - shoot.y) < 14) {
+      for (let k = 0; k < 10; k++) sparks.push({ x: e.clientX / FP + rnd(-3, 3), y: e.clientY / FP + rnd(-3, 3), born: T, vy: rnd(-6, 2) });
+      shoot = null; blip(1200, 2400, 0.25, 'sine', 0.03); return;
+    }
+  });
+
+  /* ================= keys: ribbit, and the old code ================= */
+  const KON = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'b', 'a'];
+  let kpos = 0, typed = '';
+  addEventListener('keydown', (e) => {
+    activity();
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    const k = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+    kpos = k === KON[kpos] ? kpos + 1 : k === KON[0] ? 1 : 0;
+    if (kpos === KON.length) { kpos = 0; enlighten(); }
+    if (k.length === 1) { typed = (typed + k).slice(-10); if (typed.endsWith('ribbit')) { typed = ''; croak(); } }
+  });
+  function enlighten() {
+    gold = !gold;
+    if (gold) {
+      for (let k = 0; k < 90; k++) petals.push({ x: rnd(0, FW), y: rnd(-FH, -2), vy: rnd(8, 18), w: rnd(1, 3), ph: rnd(0, 6), c: ['#f2b8cc', '#ffe39a', '#fde7ee', '#e6c468'][k % 4] });
+      [523, 659, 784, 1047].forEach((f, i) => blip(f, f, 0.5, 'sine', 0.03, i * 0.12));
+      if (visible.get(pond)) say('Oh.', 2400);
+    }
+  }
+
+  /* ================= stillness ================= */
+  function activity() { lastActive = performance.now(); sleeping = false; }
+  setInterval(() => {
+    if (!sleeping && !document.hidden && performance.now() - lastActive > 45000) {
+      sleeping = true;
+    }
+  }, 2000);
+
+  /* ================= wiring ================= */
+  function measureScroll() { const max = document.documentElement.scrollHeight - innerHeight; scrollT = max > 0 ? clamp(scrollY / max) : 0; }
+  addEventListener('scroll', () => { measureScroll(); activity(); }, { passive: true });
+  addEventListener('resize', () => { sizeSky(); sizeFx(); measureScroll(); });
+  [pond, ink].forEach((c) => io.observe(c));
+  const revealIO = new IntersectionObserver((es) => es.forEach((e) => {
+    if (!e.isIntersecting) return;
+    e.target.classList.add('in'); revealIO.unobserve(e.target);
+  }), { threshold: 0.18 });
+  document.querySelectorAll('.reveal').forEach((el) => revealIO.observe(el));
+  const T0 = document.title;
+  document.addEventListener('visibilitychange', () => { document.title = document.hidden ? '…still sitting · Wise Toad' : T0; });
+
+  sizeSky(); sizeFx(); measureScroll();
+  let last = performance.now();
+  function frame(now) {
+    const dt = Math.min(0.05, (now - last) / 1000); last = now; T += dt;
+    const A = RM ? 0 : T;
+    drawSky(A, dt);
+    if (visible.get(pond) !== false) drawPond(A, dt);
+    if (visible.get(ink)) drawInk(dt);
+    drawFx(A, dt);
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+  drawInk(1);
+
+  console.log('%c\n    @..@\n   (----)\n  ( >__< )\n  ^^ ~~ ^^\n', 'color:#719060;font:14px monospace');
+  console.log('%cHello, curious one. The toad keeps a few secrets. You might start by typing ribbit.', 'color:#e6c468;font:16px monospace');
+})();
+</script>
+</body>
+</html>
